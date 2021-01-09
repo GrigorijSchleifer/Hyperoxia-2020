@@ -1,0 +1,51 @@
+---
+title: "Effect of Hyperoxia on development of acute kidney injury in a setting of trauma"
+output: html_document
+---
+
+---
+title: "Hyperoxia in trauma report "
+author: "Grigorij Schleifer"
+date: "2021"
+output:
+pdf_document: default
+html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/grigorijschleifer/Desktop/MIMIC_III/PT_Hyperoxia_2020/data/")
+```
+
+```{r load-packages, include=FALSE}
+library(dplyr)
+library(knitr)
+library(tidyverse)
+```
+```{r data, include=FALSE}
+hyper <- read_csv("hyper.csv")
+```
+
+
+
+## Number of patients where a time weighted PaO2 calculation was performed
+
+```{r echo=FALSE, warning = FALSE}
+hyper %>% filter(!is.na(time_weighted_24hr_pao2), los >= 1) %>% summarize(n())
+```
+
+
+## Time weighted PaO2 distibution over 24 hours
+
+```{r echo=FALSE, warning = FALSE}
+hyper %>%
+    filter(!is.na(time_weighted_24hr_pao2), los >= 1) %>%
+    ggplot(aes(time_weighted_24hr_pao2)) +
+    geom_histogram(binwidth = 10) +
+    scale_x_continuous(limit=c(40, 500)) +
+    scale_y_continuous(limits = c(0, 200)) +
+    geom_vline(xintercept = median(hyper$time_weighted_24hr_pao2, na.rm = TRUE), color="green") +
+    geom_vline(xintercept = mean(hyper$time_weighted_24hr_pao2, na.rm = TRUE), color="red") +
+    xlab("Time-weighted PaO2 (mmHg)") +
+    ylab("Count (n)")
+```
