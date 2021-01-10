@@ -22,21 +22,19 @@ library(dplyr)
 library(knitr)
 library(tidyverse)
 ```
+
 ```{r data, include=FALSE}
 hyper <- read_csv("hyper.csv")
+hyper_cohort <- hyper %>% filter(!is.na(time_weighted_24hr_pao2), los >= 1)
 ```
-
-
 
 ## Number of patients where a time weighted PaO2 calculation was performed
-
 ```{r echo=FALSE, warning = FALSE}
-hyper %>% filter(!is.na(time_weighted_24hr_pao2), los >= 1) %>% summarize(n())
+hyper %>% 
+    filter(!is.na(time_weighted_24hr_pao2), los >= 1) %>% summarize(n())
 ```
 
-
 ## Time weighted PaO2 distibution over 24 hours
-
 ```{r echo=FALSE, warning = FALSE}
 hyper %>%
     filter(!is.na(time_weighted_24hr_pao2), los >= 1) %>%
@@ -49,3 +47,14 @@ hyper %>%
     xlab("Time-weighted PaO2 (mmHg)") +
     ylab("Count (n)")
 ```
+
+## Absolute numbers and proportions of acute kidney injury grouped by hospital mortality
+```{r echo=FALSE, warning = FALSE}
+hyper_cohort %>% 
+    count(hospital_mortality, aki_48hr) %>%
+    group_by(hospital_mortality) %>% 
+    mutate(prop = n/sum(n))
+```
+
+
+
