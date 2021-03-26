@@ -56,11 +56,13 @@ cohort_pao2 <- hyper %>%
             1,
             0
         )
-    ) %>%
-    mutate(censor = ifelse(los_hos < 2 & aki_48hr == 0, 1, 0)) %>% # censoring pat without aki and los < 2 days
+    ) %>% # CENSORING
+    mutate(censor = ifelse(los_hos < 2 & aki_7day_new == 0, 1, 0)) %>%
     mutate(censor_7d = case_when(los_hos < 7 &
                                      aki_7day_new == 0 ~ 1,
                                  TRUE ~ 0)) %>% 
+    mutate(aki_48hr_c = ifelse(censor == 0, 0, 1)) %>% 
+    mutate(aki_7day_c = ifelse(censor_7d == 0, 0, 1)) %>% 
     mutate( # categorizing age into ordered factor
         age_cat = case_when(
             age < 30 ~ "18-29 yr",

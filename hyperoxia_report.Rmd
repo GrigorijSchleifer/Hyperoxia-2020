@@ -18,6 +18,7 @@ knitr::opts_knit$set(root.dir = "/Users/grigorijschleifer/Desktop/MIMIC_III/PT_H
 
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
 library(tidyverse)
+library(tableone)
 theme_set(theme_light())
 ```
 
@@ -26,6 +27,7 @@ theme_set(theme_light())
 # write_csv(cohort_pao2_staged, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2_staged.csv")
 cohort_pao2 <- read_csv("~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2.csv")
 cohort_pao2_staged <- read_csv("~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2_staged.csv")
+TableOverall <- read_csv("~/Desktop/MIMIC_III/PT_Hyperoxia_2020/data/TableOverall.csv")
 ```
 
 
@@ -48,6 +50,7 @@ LOS > 1 and < 7 days
 
 ```{r}
 # Include only ICU mortality or both? Surviver bias!
+# SOFA, OASIS etc as numeric variable for hypothesis testing
 ```
 
 <br>
@@ -64,7 +67,7 @@ cohort_pao2 %>%
     nrow()
 ```
 
-## **Figure 1** Proportions in AKI based on ICU mortality
+## **Figure 1** AKI proportion based on mortality
 
 ```{r echo=FALSE}
 cohort_pao2 %>%
@@ -81,20 +84,21 @@ cohort_pao2 %>%
     theme(legend.position = "right") +
     ylim(c(0, 1)) +
     labs(
-        title = "Proportions in AKI based on ICU mortality",
-        subtitle = "Based on aki_7day_new",
+        # title = "Proportions in AKI based on ICU mortality",
+        # subtitle = "Based on aki_7day_new",
         y = "proportion",
         x = "Died in the ICU",
-        tag = "Figure 1",
+        # tag = "Figure 1",
         caption = "MIMIC data"
     ) +
     scale_fill_discrete(name = "AKI")
 ```
 
-## **Figure 2r** AKI proportions at increasing _time weighted_ oxygen levels
+## **Figure 2** AKI proportions at increasing _time weighted_ oxygen levels for deceased
 
 ```{r echo=F}
 cohort_pao2 %>%
+    filter(hospital_mortality==1) %>% 
     mutate(many_oxy_level = factor(
         many_oxy_level,
         levels = c("<= 75",
@@ -103,7 +107,7 @@ cohort_pao2 %>%
                    "> 150 & <= 200",
                    "> 200")
     )) %>%
-    count(many_oxy_level, aki_7day_new) %>%
+    count(many_oxy_level, aki_7day_new, hospital_mortality) %>%
     group_by(many_oxy_level) %>%
     mutate(prop = n / sum(n)) %>%
     ggplot(aes(
@@ -115,7 +119,7 @@ cohort_pao2 %>%
     theme_minimal() +
     theme(legend.position = "left") +
     labs(
-        title = "Proportions in AKI based on low vs high oxygen",
+        # title = "Proportions in AKI based on low vs high oxygen",
         subtitle = "Based on \"aki_7day_new\"",
         y = "proportion",
         x = "High vs low oxygen",
@@ -124,6 +128,42 @@ cohort_pao2 %>%
     ) +
     scale_fill_discrete(name = "AKI")
 ```
+
+## **Figure 3** AKI proportions at increasing _time weighted_ oxygen levels for survivers
+
+```{r echo=FALSE}
+cohort_pao2 %>%
+    filter(hospital_mortality==0) %>% 
+    mutate(many_oxy_level = factor(
+        many_oxy_level,
+        levels = c("<= 75",
+                   "> 75 & <= 100",
+                   "> 100 & <= 150",
+                   "> 150 & <= 200",
+                   "> 200")
+    )) %>%
+    count(many_oxy_level, aki_7day_new, hospital_mortality) %>%
+    group_by(many_oxy_level) %>%
+    mutate(prop = n / sum(n)) %>%
+    ggplot(aes(
+        fill = as.factor(aki_7day_new),
+        y = prop,
+        x = many_oxy_level
+    )) +
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    theme(legend.position = "left") +
+    labs(
+        # title = "Proportions in AKI based on low vs high oxygen",
+        subtitle = "Based on \"aki_7day_new\"",
+        y = "proportion",
+        x = "High vs low oxygen",
+        tag = "Figure 1",
+        caption = "MIMIC data"
+    ) +
+    scale_fill_discrete(name = "AKI")
+```
+
 
 ## *Figure 3* Proportions of AKI in the first two days grouped by ICU mortality
 
@@ -143,7 +183,7 @@ cohort_pao2 %>%
     theme(legend.position = "right") +
     ylim(c(0, 1)) +
     labs(
-        title = "Proportions in AKI in the first two days",
+        # title = "Proportions in AKI in the first two days",
         subtitle = "Based on aki_48hr, grouped by icu_mortality",
         y = "proportion",
         x = "Died in the ICU",
@@ -171,6 +211,44 @@ cohort_pao2_staged %>%
     group_by(aki_stage) %>% 
     summarise(cre_max_7d_mean = mean(cre_max_7d),
               admcreat = mean(admcreat))
+```
+
+## Table one
+```{r echo=FALSE, warning=FALSE}
+## Create an overall table for categorical variables
+catVars <- c(
+    "age_cat",
+    "gender",
+    "insurance",
+    "surg",
+    "ethnicity",
+    "has_chronic_lung_conditions",
+    "has_chronic_heart_problems",
+    "has_diabetes",
+    "has_hypertension",
+    "marital_status",
+    "aki_stage"
+)
+
+contVars = c(
+    "age",
+    "sofa",
+    "transfusion_first_24hr",
+    "fluid_intake_first24hr",
+    "oasis",
+    "saps",
+    "los",
+    "los_hos"
+)
+
+
+CreateCatTable(vars = catVars,
+               strata = "two_oxy_level",
+               data = cohort_pao2)
+
+CreateContTable(vars = contVars,
+                strata = "two_oxy_level",
+                data = cohort_pao2)
 ```
 
 
