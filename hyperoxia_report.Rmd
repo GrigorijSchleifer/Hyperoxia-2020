@@ -164,35 +164,6 @@ cohort_pao2 %>%
     scale_fill_discrete(name = "AKI")
 ```
 
-
-## *Figure 3* Proportions of AKI in the first two days grouped by ICU mortality
-
-```{r echo=FALSE, warning=FALSE}
-cohort_pao2 %>% 
-    select(icu_mortality, aki_48hr) %>% 
-    count(icu_mortality, aki_48hr) %>%
-    group_by(icu_mortality) %>% 
-    mutate(prop = n/sum(n)) %>% 
-    ggplot(aes(
-        fill = as.factor(aki_48hr),
-        y = prop,
-        x = as.factor(icu_mortality)
-    )) +
-    geom_bar(stat = "identity") +
-    theme_minimal() +
-    theme(legend.position = "right") +
-    ylim(c(0, 1)) +
-    labs(
-        # title = "Proportions in AKI in the first two days",
-        subtitle = "Based on aki_48hr, grouped by icu_mortality",
-        y = "proportion",
-        x = "Died in the ICU",
-        tag = "Figure 3",
-        caption = "MIMIC data"
-    ) +
-    scale_fill_discrete(name = "AKI")
-```
-
 Number of patients below/abowe ... time weightednPaO2 value (>300 mmHg)
 
 ```{r echo=FALSE}
@@ -215,40 +186,68 @@ cohort_pao2_staged %>%
 
 ## Table one
 ```{r echo=FALSE, warning=FALSE}
-## Create an overall table for categorical variables
-catVars <- c(
-    "age_cat",
-    "gender",
-    "insurance",
-    "surg",
-    "ethnicity",
-    "has_chronic_lung_conditions",
-    "has_chronic_heart_problems",
-    "has_diabetes",
-    "has_hypertension",
-    "marital_status",
-    "aki_stage"
+## numerically coded categorical variables need to be transformed to factors
+factorVars <- c(
+    "surg", # int
+    "has_chronic_lung_conditions", # dbl
+    "has_chronic_heart_problems", # dbl
+    "has_diabetes", # dbl
+    "has_hypertension" # dbl
 )
 
+# all variables numeric and categorical
 contVars = c(
-    "age",
-    "sofa",
-    "transfusion_first_24hr",
-    "fluid_intake_first24hr",
-    "oasis",
-    "saps",
-    "los",
-    "los_hos"
+    "age", # int
+    "sofa", # integer
+    "los", # dbl
+    "los_hos", # dbl
+    "oasis", # int
+    "saps", # int
+    "age_cat", # factor
+    "gender", # factor
+    "surg", # int
+    "has_chronic_lung_conditions", # dbl
+    "has_chronic_heart_problems", # dbl
+    "has_diabetes", # dbl
+    "has_hypertension", # dbl
+    "transfusion_first_24hr", # dbl
+    "fluid_intake_first24hr" # dbl
 )
 
+# will add confidence intervals to defined non normal variables
+nonNormal <- c(
+    "transfusion_first_24hr", # dbl
+    "fluid_intake_first24hr" # dbl
+)
 
-CreateCatTable(vars = catVars,
-               strata = "two_oxy_level",
-               data = cohort_pao2)
+# cava NA's for stratification is not possible since NA is dropped
+tableOne <-
+    CreateTableOne(
+        vars = contVars,
+        factorVars = factorVars,
+        data = cohort_pao2,
+        strata = "two_oxy_level"
+        # nonnormal = nonNormal
+    )
 
-CreateContTable(vars = contVars,
-                strata = "two_oxy_level",
-                data = cohort_pao2)
+# chisq.test() for categorical variables (with continuity correction)
+# oneway.test() for continous variables (with equal variance assumption, i.e., regular ANOVA) 
+# Two-group ANOVA is equivalent of t-test
+# if worried about the nonnormal variables and small cell counts
+# use the nonnormal argument, as well as the exact (test) argument 
+# kruskal.test() is used for the nonnormal continous variables
+# fisher.test() is used for categorical variables specified in the exact argument
+tableOne
+```
+
+
+```{r}
+# print(
+#     tableOne,
+#     showAllLevels = TRUE,
+#     formatOptions = list(big.mark = ",")
+#     # nonnormal = nonNormal
+# )
 ```
 
 
@@ -273,17 +272,6 @@ cohort_pao2 %>%
     ylab("Count (n)")
 ```
 
-Time weighted mean PaO2 in differnent admission categories
-
-```{r}
-cohort_pao2 %>%
-    group_by(admission_type) %>%
-    summarise(time_weighted_mean_PaO2 = mean(time_weighted_24hr_pao2)) %>%
-    mutate(admission_type = fct_reorder(admission_type, time_weighted_mean_PaO2)) %>%
-    ggplot(aes(admission_type, time_weighted_mean_PaO2)) +
-    geom_col() +
-    coord_flip()
-```
 
 ```{r}
 summary(cohort_pao2$time_weighted_24hr_pao2)
