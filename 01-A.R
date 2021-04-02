@@ -5,10 +5,12 @@
 ###################       GIT      ###########################
 ##############################################################
 #  use_git_config(user.name = "Grigorij Schleifer", user.email = "chaosambulance@googlemail.com")
-
-
 cohort_pao2 <- hyper %>%
+    ##### how is this calculated #####
     filter(!is.na(time_weighted_24hr_pao2), los >= 1, age >= 18) %>%
+    ###############################################################
+    #### where is the admission time? What about the 6 hours? #####
+    ###############################################################
     mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>% # assign hyperoxia levels
     mutate(
         many_oxy_level = case_when(
@@ -29,7 +31,7 @@ cohort_pao2 <- hyper %>%
                    "> 100 & <= 150",
                    "> 150 & <= 200",
                    "> 200")
-    )) %>%
+    )) %>% 
     mutate(los_hos = as.numeric(difftime(dischtime, intime, units = "days"))) %>%
     rowwise() %>%
     mutate(
@@ -92,7 +94,9 @@ cohort_pao2 <- hyper %>%
             )
     )) %>%  # MERGING admission to hyper
     inner_join(admissions, by = "hadm_id") %>% # removing "X", "X1", "X1_1" columns
-    select(!contains(".y"), -c("X", "X1", "X1_1"))
+    select(!contains(".y"), -c("X", "X1", "X1_1")) # arrange names alphabetically
+    
+    
 
 ####################################################
 #######          RENAMING COLUMNS          #########
