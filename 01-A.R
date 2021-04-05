@@ -7,11 +7,13 @@
 #  use_git_config(user.name = "Grigorij Schleifer", user.email = "chaosambulance@googlemail.com")
 cohort_pao2 <- hyper %>%
     ##### how is this calculated #####
-    filter(!is.na(time_weighted_24hr_pao2), los >= 1, age >= 18) %>%
-    ###############################################################
-    #### where is the admission time? What about the 6 hours? #####
-    ###############################################################
-    mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>% # assign hyperoxia levels
+    filter(!is.na(time_weighted_24hr_pao2), los >= 1, age >= 16) %>%
+    ####################################################################
+    #### where is the admission time? What about the 6 hours?????? #####
+    ####################################################################
+    # assign two hyperoxia levels
+    mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>% 
+    # create 5 different levels of oxygenation
     mutate(
         many_oxy_level = case_when(
             time_weighted_24hr_pao2 <= 75 ~ "<= 75",
@@ -46,8 +48,10 @@ cohort_pao2 <- hyper %>%
             na.rm = T
         )
     ) %>%
+    # removing "" from hyper$crrt_starttime
     mutate(crrt_starttime = fct_recode(crrt_starttime, NULL = "")) %>%
-    mutate(crrt_start_day = as.numeric(difftime(crrt_starttime, intime, units = "days"))) %>% # create aki definitions
+    mutate(crrt_start_day = as.numeric(difftime(crrt_starttime, intime, units = "days"))) %>% 
+    # create aki definition as yes or no (no staging)
     mutate(
         aki_7day_new = ifelse(
             cre_max_7d >= admcreat + 0.3 |
@@ -58,6 +62,9 @@ cohort_pao2 <- hyper %>%
             1,
             0
         )
+    ####################################
+    ########## AKI STAGING???? #########
+    ####################################
     ) %>% # CENSORING
     mutate(censor = ifelse(los_hos < 2 & aki_7day_new == 0, 1, 0)) %>%
     mutate(censor_7d = case_when(los_hos < 7 &
@@ -93,8 +100,8 @@ cohort_pao2 <- hyper %>%
                 ">=90 yr"
             )
     )) %>%  # MERGING admission to hyper
-    inner_join(admissions, by = "hadm_id") %>% # removing "X", "X1", "X1_1" columns
-    select(!contains(".y"), -c("X", "X1", "X1_1")) # arrange names alphabetically
+    select(!contains(".y"), -c("X")) %>%  # arrange names alphabetically
+    inner_join(admissions.real, by = "hadm_id")# removing "X" column
     
     
 
