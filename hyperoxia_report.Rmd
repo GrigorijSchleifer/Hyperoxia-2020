@@ -198,13 +198,18 @@ factorVars <- c(
 # all variables numeric and categorical
 contVars = c(
     "age", # int
-    "sofa", # integer
+    "gender", # factor
+    "insurance",
+    "marital_status",
+    "ethnicity",
+    "religion",
+    "admission_type",
     "los", # dbl
     "los_hos", # dbl
-    "oasis", # int
+    "sofa", # integer
     "saps", # int
-    "age_cat", # factor
-    "gender", # factor
+    "oasis", # int
+    # "age_cat", # factor
     "surg", # int
     "has_chronic_lung_conditions", # dbl
     "has_chronic_heart_problems", # dbl

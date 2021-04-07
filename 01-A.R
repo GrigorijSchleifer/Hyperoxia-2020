@@ -48,7 +48,7 @@ cohort_pao2 <- hyper %>%
             na.rm = T
         )
     ) %>%
-    # removing "" from hyper$crrt_starttime
+    # removing "" from hyper$crrt_starttime and code use of RRT 
     mutate(crrt_starttime = fct_recode(crrt_starttime, NULL = "")) %>%
     mutate(crrt_start_day = as.numeric(difftime(crrt_starttime, intime, units = "days"))) %>% 
     # create aki definition as yes or no (no staging)
@@ -56,9 +56,9 @@ cohort_pao2 <- hyper %>%
         aki_7day_new = ifelse(
             cre_max_7d >= admcreat + 0.3 |
                 cre_max_7d >= admcreat * 1.5 |
+                # add RRT
                 crrt_start_day < 7 &
                 !is.na(crrt_start_day),
-            # add RRT
             1,
             0
         )
@@ -100,8 +100,8 @@ cohort_pao2 <- hyper %>%
                 ">=90 yr"
             )
     )) %>%  # MERGING admission to hyper
-    select(!contains(".y"), -c("X")) %>%  # arrange names alphabetically
-    inner_join(admissions.real, by = "hadm_id")# removing "X" column
+    select(., !c("X")) %>% 
+    inner_join(admissions.real, by = "hadm_id") # removing "X" column
     
     
 
