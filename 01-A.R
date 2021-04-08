@@ -103,7 +103,9 @@ cohort_pao2 <- hyper %>%
     select(., !c("X")) %>% 
     inner_join(admissions.real, by = "hadm_id") # removing "X" column
     
-    
+# create a dataframe for status updates
+status_cohort <- cohort_pao2 %>% 
+    select(marital_status, religion, ethnicity, insurance)
 
 ####################################################
 #######          RENAMING COLUMNS          #########
