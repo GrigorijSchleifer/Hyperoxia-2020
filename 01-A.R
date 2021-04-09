@@ -107,6 +107,8 @@ cohort_pao2 <- hyper %>%
 status_cohort <- cohort_pao2 %>% 
     select(marital_status, religion, ethnicity, insurance)
 
+status_cohort[] <- lapply(status_cohort, as.character)
+
 ####################################################
 #######          RENAMING COLUMNS          #########
 ####################################################

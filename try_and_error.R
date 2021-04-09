@@ -1,68 +1,69 @@
-status_cohort <- cohort_pao2 %>% 
-    select(marital_status, religion, ethnicity, insurance)
-
-cohort_pao2$marital_status[is.na(cohort_pao2$marital_status) |
-                               cohort_pao2$marital_status == ""] <- "UNKNOWN (DEFAULT)"
+status_cohort$marital_status[is.na(status_cohort$marital_status) |
+                               status_cohort$marital_status == ""] <- "UNKNOWN (DEFAULT)"
 
 #### RELIGION #####
-cohort_pao2$religion[is.na(cohort_pao2$religion) |
-                         cohort_pao2$religion == ""] <- "NOT SPECIFIED"
+status_cohort$religion[is.na(status_cohort$religion) |
+                         status_cohort$religion == ""] <- "NOT SPECIFIED"
 
-cohort_pao2$religion[cohort_pao2$religion == "7TH DAY ADVENTIST" |
-                         cohort_pao2$religion == "BAPTIST" |
-                         cohort_pao2$religion == "CHRISTIAN SCIENTIST" |
-                         cohort_pao2$religion == "PROTESTANT QUAKER" |
-                         cohort_pao2$religion == "JEHOVAH'S WITNESS" |
-                         cohort_pao2$religion == "CATHOLIC" |
-                         cohort_pao2$religion == "GREEK ORTHODOX" |
-                         cohort_pao2$religion == "ROMANIAN EAST. ORTH" |
-                         cohort_pao2$religion == "EPISCOPALIAN"] <- "CHRISTIAN"
+status_cohort$religion[status_cohort$religion == "7TH DAY ADVENTIST" |
+                         status_cohort$religion == "BAPTIST" |
+                         status_cohort$religion == "CHRISTIAN SCIENTIST" |
+                         status_cohort$religion == "PROTESTANT QUAKER" |
+                         status_cohort$religion == "JEHOVAH'S WITNESS" |
+                         status_cohort$religion == "CATHOLIC" |
+                         status_cohort$religion == "GREEK ORTHODOX" |
+                         status_cohort$religion == "ROMANIAN EAST. ORTH" |
+                         status_cohort$religion == "EPISCOPALIAN"] <- "CHRISTIAN"
 
-cohort_pao2$religion[cohort_pao2$religion == "NOT SPECIFIED" |
-                         cohort_pao2$religion == "UNOBTAINABLE"] <- "UNKNOWN"
+status_cohort$religion[status_cohort$religion == "NOT SPECIFIED" |
+                         status_cohort$religion == "UNOBTAINABLE"] <- "UNKNOWN"
 
-cohort_pao2$religion[cohort_pao2$religion == "BUDDHIST" |
-                         cohort_pao2$religion == "MUSLIM" |
-                         cohort_pao2$religion == "UNITARIAN-UNIVERSALIST" |
-                         cohort_pao2$religion == "JEWISH" |
-                         cohort_pao2$religion == "HEBREW"] <- "OTHER"
+status_cohort$religion[status_cohort$religion == "BUDDHIST" |
+                         status_cohort$religion == "MUSLIM" |
+                         status_cohort$religion == "UNITARIAN-UNIVERSALIST" |
+                         status_cohort$religion == "JEWISH" |
+                         status_cohort$religion == "HEBREW"] <- "OTHER"
+
+
+
 
 #### ETHNICITY #####
-cohort_pao2$ethnicity[cohort_pao2$ethnicity == "ASIAN - ASIAN INDIAN" |
-                          cohort_pao2$ethnicity == "ASIAN - CHINESE" |
-                          cohort_pao2$ethnicity == "ASIAN - VIETNAMESE"] <- "ASIAN"
+status_cohort$ethnicity[status_cohort$ethnicity == "ASIAN - ASIAN INDIAN" |
+                          status_cohort$ethnicity == "ASIAN - CHINESE" |
+                          status_cohort$ethnicity == "ASIAN - VIETNAMESE"] <- "ASIAN"
 
-cohort_pao2$ethnicity[cohort_pao2$ethnicity == "BLACK/AFRICAN" |
-                          cohort_pao2$ethnicity == "BLACK/AFRICAN AMERICAN" |
-                          cohort_pao2$ethnicity == "BLACK/CAPE VERDEAN" |
-                          cohort_pao2$ethnicity == "BLACK/HAITIAN"] <- "BLACK"
+status_cohort$ethnicity[status_cohort$ethnicity == "BLACK/AFRICAN" |
+                          status_cohort$ethnicity == "BLACK/AFRICAN AMERICAN" |
+                          status_cohort$ethnicity == "BLACK/CAPE VERDEAN" |
+                          status_cohort$ethnicity == "BLACK/HAITIAN"] <- "BLACK"
 
-cohort_pao2$ethnicity[cohort_pao2$ethnicity == "HISPANIC OR LATINO" |
-                          cohort_pao2$ethnicity == "HISPANIC/LATINO - DOMINICAN" |
-                          cohort_pao2$ethnicity == "HISPANIC/LATINO - GUATEMALAN" |
-                          cohort_pao2$ethnicity == "HISPANIC/LATINO - PUERTO RICAN" |
-                          cohort_pao2$ethnicity == "HISPANIC/LATINO - SALVADORAN" |
-                          cohort_pao2$ethnicity == "SOUTH AMERICAN"] <- "HISPANIC"
+status_cohort$ethnicity[status_cohort$ethnicity == "HISPANIC OR LATINO" |
+                          status_cohort$ethnicity == "HISPANIC/LATINO - DOMINICAN" |
+                          status_cohort$ethnicity == "HISPANIC/LATINO - GUATEMALAN" |
+                          status_cohort$ethnicity == "HISPANIC/LATINO - PUERTO RICAN" |
+                          status_cohort$ethnicity == "HISPANIC/LATINO - SALVADORAN" |
+                          status_cohort$ethnicity == "SOUTH AMERICAN"] <- "HISPANIC"
 
-cohort_pao2$ethnicity[cohort_pao2$ethnicity == "WHITE - BRAZILIAN" |
-                          cohort_pao2$ethnicity == "WHITE - RUSSIAN"] <- "WHITE"
+status_cohort$ethnicity[status_cohort$ethnicity == "WHITE - BRAZILIAN" |
+                          status_cohort$ethnicity == "WHITE - RUSSIAN"] <- "WHITE"
 
-cohort_pao2$ethnicity[cohort_pao2$ethnicity == "MULTI RACE ETHNICITY" |
-                          cohort_pao2$ethnicity == "PATIENT DECLINED TO ANSWER" |
-                          cohort_pao2$ethnicity == "UNABLE TO OBTAIN" |
-                          cohort_pao2$ethnicity == "UNKNOWN/NOT SPECIFIED"] <- "OTHER"
+status_cohort$ethnicity[status_cohort$ethnicity == "MULTI RACE ETHNICITY" |
+                          status_cohort$ethnicity == "PATIENT DECLINED TO ANSWER" |
+                          status_cohort$ethnicity == "UNABLE TO OBTAIN" |
+                          status_cohort$ethnicity == "UNKNOWN/NOT SPECIFIED"] <- "OTHER"
+
 # Combine ethnicity
-cohort_pao2$ethnicity[cohort_pao2$ethnicity == "ASIAN" |
-                          cohort_pao2$ethnicity == "BLACK" |
-                          cohort_pao2$ethnicity == "HISPANIC"] <- "OTHER"
+status_cohort$ethnicity[status_cohort$ethnicity == "ASIAN" |
+                          status_cohort$ethnicity == "BLACK" |
+                          status_cohort$ethnicity == "HISPANIC"] <- "OTHER"
 
 
 #### INSURANCE #####
 # Combine insurance
-cohort_pao2$insurance[cohort_pao2$insurance == "Government" |
-                          cohort_pao2$insurance == "Self Pay" |
-                          cohort_pao2$insurance == "Private"] <- "Private/goverment/self"
+status_cohort$insurance[status_cohort$insurance == "Government" |
+                          status_cohort$insurance == "Self Pay" |
+                          status_cohort$insurance == "Private"] <- "Private/goverment/self"
 
-cohort_pao2$insurance[cohort_pao2$insurance == "Medicaid" |
-                          cohort_pao2$insurance == "Medicare"] <- "Medicaid/Medicare"
+status_cohort$insurance[status_cohort$insurance == "Medicaid" |
+                          status_cohort$insurance == "Medicare"] <- "Medicaid/Medicare"
 
