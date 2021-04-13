@@ -107,7 +107,9 @@ cohort_pao2 <- hyper %>%
 status_cohort <- cohort_pao2 %>% 
     select(marital_status, religion, ethnicity, insurance)
 
+# change all factors inside the columns to characters
 status_cohort[] <- lapply(status_cohort, as.character)
+# save a copy of a "characterised" data.frame just in case I screw things up
 status_cohort_original <- status_cohort
 
 
@@ -176,7 +178,19 @@ status_cohort$insurance[status_cohort$insurance == "Government" |
 status_cohort$insurance[status_cohort$insurance == "Medicaid" |
                             status_cohort$insurance == "Medicare"] <- "Medicaid/Medicare"
 
+##########################################
+########## change_status_columns #########
+##########################################
 
+change_status_columns <- function(df, df_status) {
+    status_list <- c("marital_status", "religion", "ethnicity", "insurance")
+    for (i in status_list) {
+        df[, i] <- df_status[, i]
+    }
+    return(df)
+}
+
+cohort_pao2_status <- change_status_columns(cohort_pao2, status_cohort)
 
 ####################################################
 #######          RENAMING COLUMNS          #########
@@ -224,7 +238,6 @@ cohort_pao2_staged <- aki_stage(cohort_pao2)
 ############################################################
 ##########          ROMOVE NA IN CHRONIC          ##########
 ############################################################
-
 check_for_na_in_conditions <- function(df) {
     columns <- c(
         "has_chronic_lung_conditions",
