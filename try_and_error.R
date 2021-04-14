@@ -1,72 +1,56 @@
-
-
-#### RELIGION (CHRISTIAN, NOT SPECIFIED, OTHER) #####
-
-#########################################################
-#### RELIGION (NONCPECIFIED, OTHER, ASIAN)          #####
-#########################################################
-status_cohort[] <- lapply(status_cohort, as.character)
-
-status_cohort$religion 
-
-     
-
-notspecified_religion <- c("UNOBTAINABLE",
-                           "")
-
-christian_religion <- c("7TH DAY ADVENTIST",
-                        "BAPTIST",
-                        "CHRISTIAN SCIENTIST",
-                        "PROTESTANT QUAKER",
-                        "JEHOVAH'S WITNESS",
-                        "CATHOLIC",
-                        "GREEK ORTHODOX",
-                        "ROMANIAN EAST. ORTH",
-                        "EPISCOPALIAN"
-)
-other_religion <- c("BUDDHIST",
-                    "MUSLIM",
-                    "UNITARIAN-UNIVERSALIST",
-                    "JEWISH",
-                    "HEBREW")
-
-asian_religion <- c("ASIAN - ASIAN INDIAN",
-                    "ASIAN - CHINESE")
-
-
-all_religion <- list(notspecified_religion, christian_religion, other_religion, asian_religion)
-
-cohort_pao2$
-for (i in all_religion) {
-    print(i)
-}
-
-##########################################################
-#### ETHNICITY (ASIAN, BLACK, HISPANIC, OTHER, WHITE)#####
-##########################################################
-
-
-black_ethnicity <- c("BLACK/AFRICAN",
-                     "BLACK/AFRICAN AMERICAN",
-                     "BLACK/CAPE VERDEAN",
-                     "BLACK/HAITIAN")
-
-
-hispanic_ethnicity <- c("HISPANIC OR LATINO",
-                        "HISPANIC/LATINO - DOMINICAN",
-                        "HISPANIC/LATINO - GUATEMALAN",
-                        "HISPANIC/LATINO - PUERTO RICAN")
-
-white_ethnicity <- c("WHITE - BRAZILIAN",
-                     "WHITE - RUSSIAN")
-
-other_ethnicity <- c("MULTI RACE ETHNICITY",
-                     "PATIENT DECLINED TO ANSWER",
-                     "UNABLE TO OBTAIN",
-                     "UNKNOWN/NOT SPECIFIED")
-
-# # Combine ethnicities to just OTHER
-# status_cohort$ethnicity[status_cohort$ethnicity == "ASIAN" |
-#                           status_cohort$ethnicity == "BLACK" |
-#                           status_cohort$ethnicity == "HISPANIC"] <- "OTHER"
-
+cohort_pao2_status_short_test <- cohort_pao2 %>%
+    select(marital_status, religion, ethnicity, insurance) %>%
+    mutate(
+        marital_status = case_when(
+            marital_status == "" ~ "UNKNOWN (DEFAULT)"
+        )
+    ) %>%
+    mutate(
+        religion = case_when(
+            religion == "UNOBTAINABLE" ~ "UNKNOWN (DEFAULT)",
+            religion == "" ~ "UNKNOWN (DEFAULT)",
+            religion == "7TH DAY ADVENTIST" ~ "CHRISTIAN",
+            religion == "BAPTIST" ~ "CHRISTIAN",
+            religion == "CHRISTIAN SCIENTIST" ~ "CHRISTIAN",
+            religion == "PROTESTANT QUAKER" ~ "CHRISTIAN",
+            religion == "JEHOVAH'S WITNESS" ~ "CHRISTIAN",
+            religion == "CATHOLIC" ~ "CHRISTIAN",
+            religion == "GREEK ORTHODOX" ~ "CHRISTIAN",
+            religion == "ROMANIAN EAST. ORTH" ~ "CHRISTIAN",
+            religion == "EPISCOPALIAN" ~ "CHRISTIAN",
+            religion == "BUDDHIST" ~ "OTHER",
+            religion == "MUSLIM" ~ "OTHER",
+            religion == "UNITARIAN-UNIVERSALIST" ~ "OTHER",
+            religion == "JEWISH" ~ "OTHER",
+            religion == "HEBREW" ~ "OTHER"
+        )
+    ) %>%
+    mutate(
+        ethnicity = case_when(
+            ethnicity == "ASIAN - ASIAN INDIAN" ~ "ASIAN",
+            ethnicity == "ASIAN - CHINESE" ~ "ASIAN",
+            ethnicity == "BLACK/AFRICAN" ~ "BLACK",
+            ethnicity == "BLACK/AFRICAN AMERICAN" ~ "BLACK",
+            ethnicity == "BLACK/CAPE VERDEAN" ~ "BLACK",
+            ethnicity == "BLACK/HAITIAN" ~ "BLACK",
+            ethnicity == "HISPANIC OR LATINO" ~ "HISPANIC"
+            ethnicity == "HISPANIC/LATINO - DOMINICAN" ~ "HISPANIC",
+            ethnicity == "HISPANIC/LATINO - GUATEMALAN" ~ "HISPANIC",
+            ethnicity == "HISPANIC/LATINO - PUERTO RICAN" ~ "HISPANIC",
+            ethnicity == "WHITE - BRAZILIAN" ~ "WHITE",
+            ethnicity == "WHITE - RUSSIAN"  ~ "WHITE",
+            ethnicity == "MULTI RACE ETHNICITY" ~ "OTHER",
+            ethnicity == "PATIENT DECLINED TO ANSWER" ~ "OTHER",
+            ethnicity == "UNABLE TO OBTAIN" ~ "OTHER",
+            ethnicity == "UNKNOWN/NOT SPECIFIED" ~ "OTHER"
+        )
+    ) %>% 
+    mutate(
+        insurance = case_when(
+            insurance == "Government" ~ "Private/goverment/self",
+            insurance == "Self Pay" ~ "Private/goverment/self",
+            insurance == "Private" ~ "Private/goverment/self"
+            insurance == "Medicaid" ~ "Medicaid/Medicare",
+            insurance == "Medicare" ~ "Medicaid/Medicare"
+        )
+    )

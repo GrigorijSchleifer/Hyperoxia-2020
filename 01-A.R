@@ -141,6 +141,9 @@ status_cohort$religion[status_cohort$religion == "BUDDHIST" |
                            status_cohort$religion == "HEBREW"] <- "OTHER"
 
 
+
+
+
 #### ETHNICITY (ASIAN, BLACK, HISPANIC, OTHER, WHITE)#####
 status_cohort$ethnicity[status_cohort$ethnicity == "ASIAN - ASIAN INDIAN" |
                             status_cohort$ethnicity == "ASIAN - CHINESE"] <- "ASIAN"
@@ -183,7 +186,8 @@ status_cohort$insurance[status_cohort$insurance == "Medicaid" |
 ##########################################
 
 change_status_columns <- function(df, df_status) {
-    status_list <- c("marital_status", "religion", "ethnicity", "insurance")
+    status_list <-
+        c("marital_status", "religion", "ethnicity", "insurance")
     for (i in status_list) {
         df[, i] <- df_status[, i]
     }
