@@ -5,7 +5,11 @@
 #########################################################
 #### RELIGION (NONCPECIFIED, OTHER, ASIAN)          #####
 #########################################################
+status_cohort[] <- lapply(status_cohort, as.character)
 
+status_cohort$religion 
+
+     
 
 notspecified_religion <- c("UNOBTAINABLE",
                            "")
@@ -30,6 +34,12 @@ asian_religion <- c("ASIAN - ASIAN INDIAN",
                     "ASIAN - CHINESE")
 
 
+all_religion <- list(notspecified_religion, christian_religion, other_religion, asian_religion)
+
+cohort_pao2$
+for (i in all_religion) {
+    print(i)
+}
 
 ##########################################################
 #### ETHNICITY (ASIAN, BLACK, HISPANIC, OTHER, WHITE)#####
@@ -55,7 +65,7 @@ other_ethnicity <- c("MULTI RACE ETHNICITY",
                      "UNABLE TO OBTAIN",
                      "UNKNOWN/NOT SPECIFIED")
 
-# # Combine ethnicity
+# # Combine ethnicities to just OTHER
 # status_cohort$ethnicity[status_cohort$ethnicity == "ASIAN" |
 #                           status_cohort$ethnicity == "BLACK" |
 #                           status_cohort$ethnicity == "HISPANIC"] <- "OTHER"

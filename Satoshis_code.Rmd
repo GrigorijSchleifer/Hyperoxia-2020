@@ -91,7 +91,7 @@ df$aki_7day_new[df$crrt_start_day<7]<-1
 df$aki_stage<-NA
 df$aki_stage[df$aki_7day_new==1]<-1
 df$aki_stage[df$cre_max_7d>=df$admcreat+0.3|df$cre_max_7d>=df$admcreat*1.5]<-1
-df$aki_stage[df$cre_max_7d>=df$admcreat*2]<-2
+df$aki_stage[df$cre_max_7d>=df$admcreat*2]<-2    
 df$aki_stage[df$cre_max_7d>=df$admcreat*3]<-3
 df$aki_stage[df$crrt_start_day<7]<-3
 summary(as.factor(df$aki_stage))
@@ -228,8 +228,8 @@ xtabs(~censor_7d+oxy_level,data=df)
 # Only selecting no censoring
 # df_nolof <- df %>% filter(df$censor == 0)        
 
-#df$aki_48hr_c[df$censor==0]<-df$aki_48hr[df$censor==0]
-#df$aki_7day_c[df$censor_7d==0]<-df$aki_7day[df$censor_7d==0]
+df$aki_48hr_c[df$censor==0]<-df$aki_48hr[df$censor==0]
+df$aki_7day_c[df$censor_7d==0]<-df$aki_7day[df$censor_7d==0]
 
 # Only selecting no censoring
 #df_nolof <- df %>%
