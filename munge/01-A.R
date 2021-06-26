@@ -7,12 +7,12 @@
 #  use_git_config(user.name = "Grigorij Schleifer", user.email = "chaosambulance@googlemail.com")
 cohort_pao2 <- hyper %>%
     ##### how is this calculated #####
-filter(!is.na(time_weighted_24hr_pao2), los >= 1, age >= 16) %>%
+    dplyr::filter(!is.na(time_weighted_24hr_pao2), los >= 1, age >= 16) %>%
     ####################################################################
-#### where is the admission time? What about the 6 hours?????? #####
-####################################################################
-# assign two hyperoxia levels
-mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>% 
+    #### where is the admission time? What about the 6 hours?????? #####
+    ####################################################################
+    # assign two hyperoxia levels
+    mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>% 
     # create 5 different levels of oxygenation
     mutate(
         many_oxy_level = case_when(
@@ -25,7 +25,7 @@ mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>%
                 time_weighted_24hr_pao2 <= 200 ~ "> 150 & <= 200",
             time_weighted_24hr_pao2 > 200 ~ "> 200"
         )
-    ) %>% # factorise hyperoxia levels
+    ) %>% # factorise hyperoxia levels    
     mutate(many_oxy_level = factor(
         many_oxy_level,
         levels = c("<= 75",
@@ -45,7 +45,7 @@ mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>%
             mean_creatinine_day5,
             mean_creatinine_day6,
             mean_creatinine_day7,
-            na.rm = T
+            na.rm = TRUE
         )
     ) %>%
     # removing "" from hyper$crrt_starttime and code use of RRT 
@@ -103,7 +103,7 @@ mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>%
     # removing "X" column
     select(., !c("X")) %>%
     # MERGING admission to hyper
-    inner_join(admissions.real, by = "hadm_id") %>% 
+    inner_join(admissions, by = "hadm_id") %>% 
     # select(marital_status, religion, ethnicity, insurance) %>%
     mutate(
         marital_status = case_when(
