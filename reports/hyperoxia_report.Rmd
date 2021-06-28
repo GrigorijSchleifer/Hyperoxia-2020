@@ -167,6 +167,7 @@ cohort_pao2 %>%
 Number of patients below/abowe ... time weightednPaO2 value (>300 mmHg)
 
 ```{r echo=FALSE}
+# aki_7day_new used instead of aki_48h
 cohort_pao2 %>% 
     count(hospital_mortality, aki_7day_new) %>% 
     group_by(hospital_mortality) %>% 
