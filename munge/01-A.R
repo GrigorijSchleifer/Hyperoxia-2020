@@ -34,6 +34,7 @@ cohort_pao2 <- hyper %>%
                    "> 150 & <= 200",
                    "> 200")
     )) %>% 
+    # hospital length of stay
     mutate(los_hos = as.numeric(difftime(dischtime, intime, units = "days"))) %>%
     rowwise() %>%
     mutate(
@@ -53,6 +54,9 @@ cohort_pao2 <- hyper %>%
     mutate(crrt_start_day = as.numeric(difftime(crrt_starttime, intime, units = "days"))) %>% 
     # create aki definition as yes or no (no staging)
     mutate(
+    ####################################
+    ########## AKI STAGING???? #########
+    ####################################
         aki_7day_new = ifelse(
             cre_max_7d >= admcreat + 0.3 |
                 cre_max_7d >= admcreat * 1.5 |
@@ -62,9 +66,6 @@ cohort_pao2 <- hyper %>%
             1,
             0
         )
-        ####################################
-        ########## AKI STAGING???? #########
-        ####################################
     ) %>% # CENSORING
     mutate(censor = ifelse(los_hos < 2 & aki_7day_new == 0, 1, 0)) %>%
     mutate(censor_7d = case_when(los_hos < 7 &
