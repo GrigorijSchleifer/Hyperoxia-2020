@@ -103,7 +103,7 @@ cohort_pao2 <- hyper %>%
     # removing "X" column
     select(., !c("X")) %>%
     # MERGING admission to hyper
-    inner_join(admissions, by = "hadm_id") %>% 
+    inner_join(admissions.real, by = "hadm_id") %>% 
     # select(marital_status, religion, ethnicity, insurance) %>%
     mutate(
         marital_status = case_when(
