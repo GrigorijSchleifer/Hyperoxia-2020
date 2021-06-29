@@ -49,7 +49,7 @@ cohort_pao2 <- hyper %>%
             na.rm = TRUE
         )
     ) %>%
-    # removing "" from hyper$crrt_starttime and code use of RRT 
+    # removing "" from hyper$crrt_starttime 
     mutate(crrt_starttime = fct_recode(crrt_starttime, NULL = "")) %>%
     mutate(crrt_start_day = as.numeric(difftime(crrt_starttime, intime, units = "days"))) %>% 
     # create aki definition as yes or no (no staging)
