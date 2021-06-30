@@ -42,16 +42,16 @@ library(purrr)
 
 ## Cohort selection (only PaO2)
 
-filter(time_weighted_24hr_pao2>=100)%>%summarize(n())
+# filter(time_weighted_24hr_pao2>=100)%>%summarize(n())
 
-mydata2<- mydata2%>%filter(!is.na(time_weighted_24hr_pao2), los >= 1)
+# mydata2<- mydata2%>%filter(!is.na(time_weighted_24hr_pao2), los >= 1)
 
-cohort_pao2 <- hyper %>%
-    filter(time_weighted_24hr_pao2>=70, los >= 1) %>%
-    mutate(oxy_level = ifelse(time_weighted_24hr_pao2 >= 155, 1,0))
+# cohort_pao2 <- hyper %>%
+#     filter(time_weighted_24hr_pao2>=70, los >= 1) %>%
+#     mutate(oxy_level = ifelse(time_weighted_24hr_pao2 >= 155, 1,0))
 
 # assign exposure based on pao2 (ICU LOS>24h)
-summary(cohort_pao2$time_weighted_24hr_pao2)
+# summary(cohort_pao2$time_weighted_24hr_pao2)
 
 # assign exposure based on spo2 (patients wihtout pao2 measured)
 #cohort_spo2 <- mydata2 %>%
@@ -70,30 +70,41 @@ df<- cohort_pao2
 # `dischtime` is discharge from hospital
 # `outtime` is discharge from ICU
 as_tibble(df)
-df<-df%>%mutate(los_hos=as.numeric(difftime(dischtime,intime,units = "days")))
-
-# Calculation of maximum Cre in 7 days
-df <- df %>% 
-    rowwise() %>% 
-    mutate(cre_max_7d=max(mean_creatinine_day1, mean_creatinine_day2, 
-                          mean_creatinine_day3, mean_creatinine_day4, 
-                          mean_creatinine_day5, mean_creatinine_day6, 
-                          mean_creatinine_day7, na.rm=T)) %>% 
-    as.data.frame() %>%
-    mutate(cre_max_7d=ifelse(cre_max_7d>=0, cre_max_7d, NA))%>%
-    mutate(aki_7day_new=ifelse(cre_max_7d>=admcreat+0.3|cre_max_7d>=admcreat*1.5,1,0))
+df <- df%>%mutate(los_hos=as.numeric(difftime(dischtime,intime,units = "days")))
+# 
+# # Calculation of maximum Cre in 7 days
+# df <- df %>%
+#   rowwise() %>%
+#   mutate(
+#     cre_max_7d = max(
+#       mean_creatinine_day1,
+#       mean_creatinine_day2,
+#       mean_creatinine_day3,
+#       mean_creatinine_day4,
+#       mean_creatinine_day5,
+#       mean_creatinine_day6,
+#       mean_creatinine_day7,
+#       na.rm = T
+#     )
+#   ) %>%
+#   as.data.frame() %>%
+#   mutate(cre_max_7d = ifelse(cre_max_7d >= 0, cre_max_7d, NA)) %>%
+#   mutate(aki_7day_new = ifelse(cre_max_7d >= admcreat + 0.3 |
+#                                  cre_max_7d >= admcreat * 1.5, 1, 0))
 
 # Inlude RRT for AKI
-df<-df%>%mutate(crrt_start_day=as.numeric(difftime(crrt_starttime,intime,units = "days")))
-df$aki_7day_new[df$crrt_start_day<7]<-1
+df <-
+  df %>% mutate(crrt_start_day = as.numeric(difftime(crrt_starttime, intime, units = "days")))
+df$aki_7day_new[df$crrt_start_day < 7] <- 1
 
 # AKI Stage
-df$aki_stage<-NA
-df$aki_stage[df$aki_7day_new==1]<-1
-df$aki_stage[df$cre_max_7d>=df$admcreat+0.3|df$cre_max_7d>=df$admcreat*1.5]<-1
-df$aki_stage[df$cre_max_7d>=df$admcreat*2]<-2    
-df$aki_stage[df$cre_max_7d>=df$admcreat*3]<-3
-df$aki_stage[df$crrt_start_day<7]<-3
+df$aki_stage <- NA
+df$aki_stage[df$aki_7day_new == 1] <- 1
+df$aki_stage[df$cre_max_7d >= df$admcreat + 0.3 |
+               df$cre_max_7d >= df$admcreat * 1.5] <- 1
+df$aki_stage[df$cre_max_7d >= df$admcreat * 2] <- 2
+df$aki_stage[df$cre_max_7d >= df$admcreat * 3] <- 3
+df$aki_stage[df$crrt_start_day < 7] <- 3
 summary(as.factor(df$aki_stage))
 summary(as.factor(df$aki_7day_new))
 
