@@ -24,9 +24,9 @@ theme_set(theme_light())
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
 # write_csv(cohort_pao2, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2.csv")
 # write_csv(cohort_pao2_staged, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2_staged.csv")
-cohort_pao2 <- read_csv("~/Desktop/Hyperoxia_2020/cohort_pao2.csv")
-cohort_pao2_staged <- read_csv("~/Desktop/Hyperoxia_2020/cohort_pao2_staged.csv")
-TableOverall <- read_csv("~/Desktop/Hyperoxia_2020/data/TableOverall.csv")
+cohort_pao2 <- read_csv("~/Desktop/Hyperoxia-2020/cohort_pao2.csv")
+cohort_pao2_staged <- read_csv("~/Desktop/Hyperoxia-2020/cohort_pao2_staged.csv")
+TableOverall <- read_csv("~/Desktop/Hyperoxia-2020/data/TableOverall.csv")
 ```
 
 
@@ -132,7 +132,7 @@ cohort_pao2 %>%
 
 ```{r echo=FALSE}
 cohort_pao2 %>%
-    dplyr::filter(hospital_mortality==0) %>% 
+    # dplyr::filter(hospital_mortality==0) %>% 
     mutate(many_oxy_level = factor(
         many_oxy_level,
         levels = c("<= 75",
@@ -154,7 +154,42 @@ cohort_pao2 %>%
     theme(legend.position = "left") +
     labs(
         # title = "Proportions in AKI based on low vs high oxygen",
-        subtitle = "Based on \"aki_7day_new\"",
+        subtitle = "Based on \"aki_7day_new\" and all patients",
+        y = "proportion",
+        x = "High vs low oxygen",
+        tag = "Figure 1",
+        caption = "MIMIC data"
+    ) +
+    scale_fill_discrete(name = "AKI")
+```
+
+## **Figure 3** AKI proportions at increasing _time weighted_ oxygen levels for ALL patients
+
+```{r echo=FALSE}
+cohort_pao2 %>%
+    # dplyr::filter(hospital_mortality==0) %>% 
+    mutate(many_oxy_level = factor(
+        many_oxy_level,
+        levels = c("<= 75",
+                   "> 75 & <= 100",
+                   "> 100 & <= 150",
+                   "> 150 & <= 200",
+                   "> 200")
+    )) %>%
+    count(many_oxy_level, aki_7day_new, hospital_mortality) %>%
+    group_by(many_oxy_level) %>%
+    mutate(prop = n / sum(n)) %>%
+    ggplot(aes(
+        fill = as.factor(aki_7day_new),
+        y = prop,
+        x = many_oxy_level
+    )) +
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    theme(legend.position = "left") +
+    labs(
+        # title = "Proportions in AKI based on low vs high oxygen",
+        subtitle = "Based on \"aki_7day_new\" and all patients",
         y = "proportion",
         x = "High vs low oxygen",
         tag = "Figure 1",

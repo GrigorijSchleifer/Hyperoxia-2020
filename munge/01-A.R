@@ -309,7 +309,7 @@ detach(cohort_pao2)
 ##########     SAVING     ##########
 ####################################
 
-write_csv(cohort_pao2, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2.csv")
+write_csv(cohort_pao2, "~/Desktop/Hyperoxia-2020/cohort_pao2.csv")
 
 
 
