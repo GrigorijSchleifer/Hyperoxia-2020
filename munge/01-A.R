@@ -250,6 +250,7 @@ cohort_pao2_staged <- aki_stage(cohort_pao2)
 ############################################################
 check_for_na_in_conditions <- function(df) {
     columns <- c(
+        "subject_id",
         "has_chronic_lung_conditions",
         "has_chronic_heart_problems",
         "has_diabetes",

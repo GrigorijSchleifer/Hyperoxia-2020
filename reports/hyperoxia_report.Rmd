@@ -13,11 +13,10 @@ html_document: default
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "/Users/grigorijschleifer/Desktop/MIMIC_III/PT_Hyperoxia_2020/data/")
+knitr::opts_knit$set(root.dir = "/Users/grigorijschleifer/Desktop/Hyperoxia-2020/data/")
 ```
 
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
-library(tidyverse)
 library(tableone)
 theme_set(theme_light())
 ```
@@ -25,9 +24,9 @@ theme_set(theme_light())
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
 # write_csv(cohort_pao2, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2.csv")
 # write_csv(cohort_pao2_staged, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2_staged.csv")
-cohort_pao2 <- read_csv("~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2.csv")
-cohort_pao2_staged <- read_csv("~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2_staged.csv")
-TableOverall <- read_csv("~/Desktop/MIMIC_III/PT_Hyperoxia_2020/data/TableOverall.csv")
+cohort_pao2 <- read_csv("~/Desktop/Hyperoxia_2020/cohort_pao2.csv")
+cohort_pao2_staged <- read_csv("~/Desktop/Hyperoxia_2020/cohort_pao2_staged.csv")
+TableOverall <- read_csv("~/Desktop/Hyperoxia_2020/data/TableOverall.csv")
 ```
 
 
