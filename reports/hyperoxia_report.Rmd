@@ -24,8 +24,8 @@ theme_set(theme_light())
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
 # write_csv(cohort_pao2, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2.csv")
 # write_csv(cohort_pao2_staged, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2_staged.csv")
-cohort_pao2 <- read_csv("~/Desktop/Hyperoxia-2020/cohort_pao2.csv")
-cohort_pao2_staged <- read_csv("~/Desktop/Hyperoxia-2020/cohort_pao2_staged.csv")
+cohort_pao2 <- read_csv("~/Desktop/Hyperoxia-2020/report_data/cohort_pao2.csv")
+cohort_pao2_staged <- read_csv("~/Desktop/Hyperoxia-2020/report_data/cohort_pao2_staged.csv")
 TableOverall <- read_csv("~/Desktop/Hyperoxia-2020/data/TableOverall.csv")
 ```
 
@@ -64,6 +64,68 @@ Number of patients having a time weighted PaO2 and SpO2 over 100 mmHg and 94 % r
 ```{r echo=FALSE, warning=FALSE}
 cohort_pao2 %>%
     nrow()
+```
+
+## Table one
+
+```{r echo=FALSE, warning=FALSE}
+## numerically coded categorical variables need to be transformed to factors
+factorVars <- c(
+    "surg", # int
+    "has_chronic_lung_conditions", # dbl
+    "has_chronic_heart_problems", # dbl
+    "has_diabetes", # dbl
+    "has_hypertension" # dbl
+)
+
+# all variables numeric and categorical
+contVars = c(
+    "age", # int
+    "gender", # factor
+    # "insurance",
+    "marital_status",
+    "ethnicity",
+    "religion",
+    "admission_type",
+    "los", # dbl
+    "los_hos", # dbl
+    "sofa", # integer
+    "saps", # int
+    "oasis", # int
+    # "age_cat", # factor
+    "surg", # int
+    "has_chronic_lung_conditions", # dbl
+    "has_chronic_heart_problems", # dbl
+    "has_diabetes", # dbl
+    "has_hypertension", # dbl
+    "transfusion_first_24hr", # dbl
+    "fluid_intake_first24hr" # dbl
+)
+
+# will add confidence intervals to defined non normal variables
+nonNormal <- c(
+    "transfusion_first_24hr", # dbl
+    "fluid_intake_first24hr" # dbl
+)
+
+# cava NA's for stratification is not possible since NA is dropped
+tableOne <-
+    CreateTableOne(
+        vars = contVars,
+        # factorVars = factorVars,
+        data = cohort_pao2,
+        # strata = "two_oxy_level"
+        # nonnormal = nonNormal
+    )
+
+# chisq.test() for categorical variables (with continuity correction)
+# oneway.test() for continous variables (with equal variance assumption, i.e., regular ANOVA) 
+# Two-group ANOVA is equivalent of t-test
+# if worried about the nonnormal variables and small cell counts
+# use the nonnormal argument, as well as the exact (test) argument 
+# kruskal.test() is used for the nonnormal continous variables
+# fisher.test() is used for categorical variables specified in the exact argument
+tableOne
 ```
 
 ## **Figure 1** AKI proportion based on mortality
@@ -219,83 +281,12 @@ cohort_pao2_staged %>%
               admcreat = mean(admcreat))
 ```
 
-## Table one
-```{r echo=FALSE, warning=FALSE}
-## numerically coded categorical variables need to be transformed to factors
-factorVars <- c(
-    "surg", # int
-    "has_chronic_lung_conditions", # dbl
-    "has_chronic_heart_problems", # dbl
-    "has_diabetes", # dbl
-    "has_hypertension" # dbl
-)
-
-# all variables numeric and categorical
-contVars = c(
-    "age", # int
-    "gender", # factor
-    "insurance",
-    "marital_status",
-    "ethnicity",
-    "religion",
-    "admission_type",
-    "los", # dbl
-    "los_hos", # dbl
-    "sofa", # integer
-    "saps", # int
-    "oasis", # int
-    # "age_cat", # factor
-    "surg", # int
-    "has_chronic_lung_conditions", # dbl
-    "has_chronic_heart_problems", # dbl
-    "has_diabetes", # dbl
-    "has_hypertension", # dbl
-    "transfusion_first_24hr", # dbl
-    "fluid_intake_first24hr" # dbl
-)
-
-# will add confidence intervals to defined non normal variables
-nonNormal <- c(
-    "transfusion_first_24hr", # dbl
-    "fluid_intake_first24hr" # dbl
-)
-
-# cava NA's for stratification is not possible since NA is dropped
-tableOne <-
-    CreateTableOne(
-        vars = contVars,
-        factorVars = factorVars,
-        data = cohort_pao2,
-        strata = "two_oxy_level"
-        # nonnormal = nonNormal
-    )
-
-# chisq.test() for categorical variables (with continuity correction)
-# oneway.test() for continous variables (with equal variance assumption, i.e., regular ANOVA) 
-# Two-group ANOVA is equivalent of t-test
-# if worried about the nonnormal variables and small cell counts
-# use the nonnormal argument, as well as the exact (test) argument 
-# kruskal.test() is used for the nonnormal continous variables
-# fisher.test() is used for categorical variables specified in the exact argument
-tableOne
-```
-
-
-```{r}
-# print(
-#     tableOne,
-#     showAllLevels = TRUE,
-#     formatOptions = list(big.mark = ",")
-#     # nonnormal = nonNormal
-# )
-```
-
 
 Time weighted PaO2 distibution over 24 hours
 
 ```{r echo=FALSE, warning=FALSE}
 cohort_pao2 %>%
-    filter(!is.na(time_weighted_24hr_pao2), los >= 1) %>%
+    dplyr::filter(!is.na(time_weighted_24hr_pao2), los >= 1) %>%
     ggplot(aes(time_weighted_24hr_pao2)) +
     geom_histogram(binwidth = 10) +
     geom_vline(
@@ -317,21 +308,4 @@ cohort_pao2 %>%
 summary(cohort_pao2$time_weighted_24hr_pao2)
 ```
 
-Dispay of AKI numbers depending on admission category
-
-```{r}
-# cohort_pao2 %>% 
-#     select(admission_type, aki_7day_new, aki_48hr, aki_7day) %>% 
-#     count(admission_type) %>% 
-#     mutate(admission_type_reordered = fct_reorder(admission_type, n)) %>% 
-#     ggplot(aes(x = admission_type_reordered, n)) +
-#     geom_boxplot() +
-#     coord_flip()
-```
-
-Proportion of AKI 
-
-```{r}
-
-```
 

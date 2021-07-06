@@ -33,7 +33,7 @@ cohort_pao2 <- hyper %>%
                    "> 100 & <= 150",
                    "> 150 & <= 200",
                    "> 200")
-    )) %>% 
+    )) %>%
     # hospital length of stay
     mutate(los_hos = as.numeric(difftime(dischtime, intime, units = "days"))) %>%
     rowwise() %>%
