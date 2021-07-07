@@ -48,6 +48,7 @@ LOS > 1 and < 7 days
 # *Recent* problem
 
 ```{r}
+# Group size difference is huge: 295 vs 1539
 # Include only ICU mortality or both? Surviver bias!
 # SOFA, OASIS etc as numeric variable for hypothesis testing
 ```
@@ -122,10 +123,13 @@ tableOne <-
 # fisher.test() is used for categorical variables specified in the exact argument
 ```
 
-
-```{r}
-tableOne
+```{r echo=FALSE}
+print(tableOne, 
+      digits = 1,
+      quote = FALSE,
+      explain = FALSE)
 ```
+
 
 ## **Figure 1** AKI proportion based on mortality
 
