@@ -102,20 +102,15 @@ contVars = c(
     "fluid_intake_first24hr" # dbl
 )
 
-# will add confidence intervals to defined non normal variables
-nonNormal <- c(
-    "transfusion_first_24hr", # dbl
-    "fluid_intake_first24hr" # dbl
-)
 
 # cava NA's for stratification is not possible since NA is dropped
 tableOne <-
     CreateTableOne(
-        vars = contVars,
-        # factorVars = factorVars,
         data = cohort_pao2,
-        # strata = "two_oxy_level"
-        # nonnormal = nonNormal
+        vars = contVars,
+        factorVars = factorVars,
+        addOverall = FALSE,
+        strata = "two_oxy_level"
     )
 
 # chisq.test() for categorical variables (with continuity correction)
@@ -125,6 +120,10 @@ tableOne <-
 # use the nonnormal argument, as well as the exact (test) argument 
 # kruskal.test() is used for the nonnormal continous variables
 # fisher.test() is used for categorical variables specified in the exact argument
+```
+
+
+```{r}
 tableOne
 ```
 
