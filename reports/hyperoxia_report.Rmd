@@ -24,9 +24,9 @@ theme_set(theme_light())
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
 # write_csv(cohort_pao2, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2.csv")
 # write_csv(cohort_pao2_staged, "~/Desktop/MIMIC_III/PT_Hyperoxia_2020/cohort_pao2_staged.csv")
-cohort_pao2 <- read_csv("~/Desktop/Hyperoxia-2020/report_data/cohort_pao2.csv")
-cohort_pao2_staged <- read_csv("~/Desktop/Hyperoxia-2020/report_data/cohort_pao2_staged.csv")
-TableOverall <- read_csv("~/Desktop/Hyperoxia-2020/data/TableOverall.csv")
+cohort_pao2 <- read_csv("~/Desktop/Hyperoxia-2020/data/report_data/cohort_pao2.csv")
+cohort_pao2_staged <- read_csv("~/Desktop/Hyperoxia-2020/data/report_data/cohort_pao2_staged.csv")
+TableOverall <- read_csv("~/Desktop/Hyperoxia-2020/data/report_data/TableOverall.csv")
 ```
 
 
