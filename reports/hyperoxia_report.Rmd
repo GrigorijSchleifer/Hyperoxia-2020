@@ -3,8 +3,8 @@ title: "Effect of Hyperoxia on development of acute kidney injury in a setting o
 output: html_document
 ---
 ---
-title: "Hyperoxia in trauma report "
-author: "Grigorij Schleifer"
+title: "Mild hyperoxia in patients mith trauma is associated with less frequent AKI incidence"
+author: "Dr. med. Grigorij Schleifer"
 date: "2021"
 output:
 pdf_document: default
@@ -29,21 +29,10 @@ cohort_pao2_staged <- read_csv("~/Desktop/Hyperoxia-2020/data/report_data/cohort
 TableOverall <- read_csv("~/Desktop/Hyperoxia-2020/data/report_data/TableOverall.csv")
 ```
 
-
-# Explonatory Data Analysis
-
-## AKI variables
-
-aki_stage_48hr <br>
-aki_48hr <br>
-aki_stage_7day <br>
-aki_7day <br>
-aki_7day_new
-
 ## Inclusion criteria
 
-Age > 18
-LOS > 1 and < 7 days
+##### <strong>Age</strong> > 18 <br>
+##### <strong>Length of stay (LOS)</strong> 1 and < 7 days
 
 # *Recent* problem
 
