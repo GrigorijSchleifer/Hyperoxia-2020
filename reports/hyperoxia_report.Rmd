@@ -130,6 +130,13 @@ print(tableOne,
       explain = FALSE)
 ```
 
+```{r}
+CreateCatTable(
+  vars = c("aki_7day_new", "hospmort30day"),
+  strata = "two_oxy_level",
+  data = cohort_pao2
+)
+```
 
 ## **Figure 1** AKI proportion based on mortality
 

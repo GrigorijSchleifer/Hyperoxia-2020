@@ -54,9 +54,6 @@ cohort_pao2 <- hyper %>%
     mutate(crrt_start_day = as.numeric(difftime(crrt_starttime, intime, units = "days"))) %>% 
     # create aki definition as yes or no (no staging)
     mutate(
-    ####################################
-    ########## AKI STAGING???? #########
-    ####################################
         aki_7day_new = ifelse(
             cre_max_7d >= admcreat + 0.3 |
                 cre_max_7d >= admcreat * 1.5 |
