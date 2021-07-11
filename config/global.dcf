@@ -1,0 +1,17 @@
+version: 0.9.3
+data_loading: TRUE
+data_loading_header: TRUE
+data_ignore:
+cache_loading: FALSE
+recursive_loading: FALSE
+munging: TRUE
+logging: FALSE
+logging_level: INFO
+load_libraries: TRUE
+libraries: dplyr, infer, tidyverse, knitr, janitor, tableone
+as_factors: TRUE
+tables_type: tibble
+attach_internal_libraries: FALSE
+cache_loaded_data: TRUE
+sticky_variables: NONE
+underscore_variables: FALSE

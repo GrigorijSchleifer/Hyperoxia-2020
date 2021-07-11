@@ -3,13 +3,17 @@ title: "Effect of Hyperoxia on development of acute kidney injury in a setting o
 output: html_document
 ---
 ---
-title: "Mild hyperoxia in patients mith trauma is associated with less frequent AKI incidence"
+title: "Mild hyperoxia in patients with trauma is associated with reduced AKI"
 author: "Dr. med. Grigorij Schleifer"
+
 date: "2021"
 output:
 pdf_document: default
 html_document: default
 ---
+
+Aus der Klinik und Poliklinik für Anästhesiologie und Operative Intensivmedizin <br>
+#### Direktor: Prof. Dr. med. Mark Coburn
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -307,4 +311,4 @@ cohort_pao2 %>%
 summary(cohort_pao2$time_weighted_24hr_pao2)
 ```
 
-
+Man, you never know in which direction the things might go from here. The differences in oxygen demand some knew applications for 
