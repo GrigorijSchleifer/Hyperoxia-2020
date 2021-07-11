@@ -1,0 +1,769 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+ ---
+    title: "Untitled"
+author: "Satoshi"
+date: "4/8/2019"
+output:
+    pdf_document: default
+html_document: default
+---
+    
+    ```{r}
+library(descr)
+library(dplyr)
+library(ggplot2)
+library(readr)
+require(descr)
+library(car)
+library(tableone)
+require(geepack)
+library(multcomp)
+library(BSagri)
+require(sandwich)
+library(DescTools)
+library(gtools)
+library(MatchIt)
+library(optmatch)
+library(multcomp)   # estimation of linear contrasts from GLMs
+library(gtools)     # easy decile creation
+library(infoDecompuTE)
+library(boot)
+library(survminer)
+library(survival)
+library(lmtest)
+library(broom)
+library(tibble)
+library(tidyr)
+library(purrr)
+
+#install.packages("tableone")
+library(tableone)
+```
+
+## Cohort selection (only PaO2)
+```{r}
+Trauma_Hyperoxemia_v3 <- read_csv("Trauma_Hyperoxemia_v3.csv")
+admissions <- read_csv("admissions.csv")  # for insurance, religion, marital stage and ethnicity.
+
+mydata2 <- Trauma_Hyperoxemia_v3
+
+# Exlclude people age less than 18 years old and surgical patients
+mydata2 <- mydata2 %>%
+    filter(age >= 18 , surg==0)
+
+
+mydata2 %>% 
+    filter(!is.na(time_weighted_24hr_pao2), los >= 1) %>%
+    ggplot(aes(time_weighted_24hr_pao2)) +
+    geom_histogram(binwidth = 10) +
+    scale_x_continuous(limit=c(40, 500)) +
+    geom_vline(xintercept = 60, color="red") +
+    geom_vline(xintercept = 100, color="red") +
+    xlab("Time-weighted PaO2 (mmHg)") +
+    ylab ("Count (n)")
+
+mydata2%>% filter(!is.na(time_weighted_24hr_pao2), los >= 1)%>%summarize(n())
+mydata2%>% filter(!is.na(time_weighted_24hr_pao2), los >= 1)%>%filter(time_weighted_24hr_pao2>=100)%>%summarize(n())
+
+mydata2<- mydata2%>%filter(!is.na(time_weighted_24hr_pao2), los >= 1)
+cohort_pao2 <- mydata2 %>%
+    filter(time_weighted_24hr_pao2>=70, los >= 1) %>%
+    mutate(oxy_level = 
+               ifelse(time_weighted_24hr_pao2 >= 155, 1,0))
+
+# assign exposure based on pao2 (ICU LOS>24h)
+summary(cohort_pao2$time_weighted_24hr_pao2)
+
+# assign exposure based on spo2 (patients wihtout pao2 measured)
+#cohort_spo2 <- mydata2 %>%
+#  filter(is.na(mydata2$time_weighted_24hr_pao2) == TRUE , los >= 1, 
+#        time_weighted_24hr_spo2 >= 94) %>%
+#  mutate(oxy_level = 
+#           ifelse(time_weighted_24hr_spo2 >= 98, 1,0))
+
+# merge two groups 
+#df<- rbind(cohort_pao2,cohort_spo2)
+df<- cohort_pao2
+
+
+# check censoring: if a patient discharged from ICU within 2 days but developed AKI within 2 days, he or she completed follow-up. This "aki_48h" is AKI in ICU. For censoring, we do not know if he or she developed AKI after discharge.
+# That's wrong. Lab data are from both ICU and wards. 
+# `dischtime` is discharge from hospital
+# `outtime` is discharge from ICU
+as_tibble(df)
+df<-df%>%mutate(los_hos=as.numeric(difftime(dischtime,intime,units = "days")))
+
+# Calculation of maximum Cre in 7 days
+df<-df%>% rowwise()%>%mutate(cre_max_7d=max(mean_creatinine_day1,mean_creatinine_day2,mean_creatinine_day3,mean_creatinine_day4,mean_creatinine_day5,mean_creatinine_day6,mean_creatinine_day7,na.rm=T))%>%as.data.frame()%>%
+    mutate(cre_max_7d=ifelse(cre_max_7d>=0, cre_max_7d, NA))%>%
+    mutate(aki_7day_new=ifelse(cre_max_7d>=admcreat+0.3|cre_max_7d>=admcreat*1.5,1,0))
+
+# Inlude RRT for AKI
+df<-df%>%mutate(crrt_start_day=as.numeric(difftime(crrt_starttime,intime,units = "days")))
+df$aki_7day_new[df$crrt_start_day<7]<-1
+
+#AKI Stage
+df$aki_stage<-NA
+df$aki_stage[df$aki_7day_new==1]<-1
+df$aki_stage[df$cre_max_7d>=df$admcreat+0.3|df$cre_max_7d>=df$admcreat*1.5]<-1
+df$aki_stage[df$cre_max_7d>=df$admcreat*2]<-2
+df$aki_stage[df$cre_max_7d>=df$admcreat*3]<-3
+df$aki_stage[df$crrt_start_day<7]<-3
+summary(as.factor(df$aki_stage))
+summary(as.factor(df$aki_7day_new))
+
+#df <- df %>%
+#  mutate(censor = ifelse(los_hos < 2 & aki_48hr == 0, 1,0))
+df <- df %>%
+    mutate(censor_7d = case_when(.$los_hos < 7 & .$aki_7day_new == 0~1,
+                                 is.na(aki_7day_new)~1,
+                                 TRUE~0))
+
+summary(df$aki_7day_new)
+
+df <- merge( df,admissions, by = "hadm_id")
+
+df$has_chronic_lung_conditions[is.na(df$has_chronic_lung_conditions)] <- 0
+df$has_chronic_heart_problems[is.na(df$has_chronic_heart_problems)] <- 0
+df$has_diabetes[is.na(df$has_diabetes)] <- 0
+df$has_hypertension[is.na(df$has_hypertension)] <- 0
+df$transfusion_first_24hr[is.na(df$transfusion_first_24hr)] <- 0
+df$marital_status[is.na(df$marital_status)] <- "UNKNOWN (DEFAULT)"
+df$religion[is.na(df$religion)] <- "NOT SPECIFIED"
+#df$marital_status[df$marital_status == "marital_statusUNKNOWN (DEFAULT)"] <- "UNKNOWN (DEFAULT)"
+df$ethnicity[df$ethnicity == "ASIAN - ASIAN INDIAN" | 
+                 df$ethnicity == "ASIAN - CHINESE" | 
+                 df$ethnicity == "ASIAN - VIETNAMESE"] <- "ASIAN"
+
+df$ethnicity[df$ethnicity == "BLACK/AFRICAN" | 
+                 df$ethnicity == "BLACK/AFRICAN AMERICAN" | 
+                 df$ethnicity == "BLACK/CAPE VERDEAN" |
+                 df$ethnicity == "BLACK/HAITIAN"] <- "BLACK"
+
+df$ethnicity[df$ethnicity == "HISPANIC OR LATINO" | 
+                 df$ethnicity == "HISPANIC/LATINO - DOMINICAN" | 
+                 df$ethnicity == "HISPANIC/LATINO - GUATEMALAN" |
+                 df$ethnicity == "HISPANIC/LATINO - PUERTO RICAN" |
+                 df$ethnicity == "HISPANIC/LATINO - SALVADORAN" |
+                 df$ethnicity == "SOUTH AMERICAN"] <- "HISPANIC"
+
+df$ethnicity[df$ethnicity == "WHITE - BRAZILIAN" | 
+                 df$ethnicity == "WHITE - RUSSIAN"] <- "WHITE"
+
+df$ethnicity[df$ethnicity == "MULTI RACE ETHNICITY" | 
+                 df$ethnicity == "PATIENT DECLINED TO ANSWER" | 
+                 df$ethnicity == "UNABLE TO OBTAIN" |
+                 df$ethnicity == "UNKNOWN/NOT SPECIFIED"] <- "OTHER"
+
+# Combine ethnicity
+df$ethnicity[df$ethnicity == "ASIAN" | 
+                 df$ethnicity == "BLACK" | 
+                 df$ethnicity == "HISPANIC"] <- "OTHER"
+summary(as.factor(df$ethnicity))
+
+df$religion[df$religion == "7TH DAY ADVENTIST" | 
+                df$religion == "BAPTIST" | 
+                df$religion == "CHRISTIAN SCIENTIST" |
+                df$religion == "PROTESTANT QUAKER" |
+                df$religion == "JEHOVAH'S WITNESS" |
+                df$religion == "CATHOLIC" |
+                df$religion == "GREEK ORTHODOX" |
+                df$religion == "ROMANIAN EAST. ORTH" |
+                df$religion == "EPISCOPALIAN" ] <- "CHRISTIAN"
+
+df$religion[df$religion == "BUDDHIST" | 
+                df$religion == "MUSLIM" | 
+                df$religion == "UNITARIAN-UNIVERSALIST" |
+                df$religion == "JEWISH" |
+                df$religion == "HEBREW" ] <- "OTHER"
+
+df$religion[df$religion == "NOT SPECIFIED" | 
+                df$religion == "UNOBTAINABLE" ] <- "UNKNOWN"
+
+# Combine insurance
+df$insurance[df$insurance == "Government" | 
+                 df$insurance == "Self Pay" |
+                 df$insurance=="Private"] <- "Private/goverment/self"
+df$insurance[df$insurance == "Medicaid" | 
+                 df$insurance == "Medicare"] <- "Medicaid/Medicare"
+df<-df%>% mutate(insurance=factor(df$insurance, c("Private/goverment/self","Medicaid/Medicare")))
+summary(as.factor(df$insurance))
+
+#CreateTableOne(vars="marital_status", data=df)
+#df$marital_status[df$marital_status == "NOT SPECIFIED" | 
+#df$religion == "UNOBTAINABLE" ] <- "UNKNOWN"
+
+df$age_cat[df$age < 30 ] <- "18-29 yr"
+df$age_cat[df$age < 40 & df$age >= 30] <- "30-39 yr"
+df$age_cat[df$age < 50 & df$age >= 40] <- "40-49 yr"
+df$age_cat[df$age < 60 & df$age >= 50] <- "50-59 yr"
+df$age_cat[df$age < 70 & df$age >= 60] <- "60-69 yr"
+df$age_cat[df$age < 80 & df$age >= 70] <- "70-79 yr"
+df$age_cat[df$age < 90 & df$age >= 80] <- "80-89 yr"
+df$age_cat[df$age >= 90] <- ">=90 yr"
+
+summary(df$age)
+df%>%ggplot(aes(age))+
+    geom_histogram(binwidth = 2)
+df%>% filter(age!=300)%>%arrange(desc(age))%>%dplyr::select(age)
+
+# age over 89yo: re-labeled to 90yo
+df$age[df$age>=300]<-90
+
+df$fluid_intake_first24hr[is.na(df$fluid_intake_first24hr)] <-0
+df$transfusion_first_24hr[is.na(df$transfusion_first_24hr)] <-0
+
+# Patients with los>20 are complete follow-up for this suruval analysis.
+# Making two columns: time and event
+df$icu_mortality_20day[df$los <= 20] <- df$icu_mortality[df$los <= 20]
+df$time_20[df$los <= 20] <- df$los[df$los <= 20]
+df$icu_mortality_20day[df$los > 20] <- 0
+df$time_20[df$los > 20] <- 20
+
+df$hospmort28day[df$los <= 28] <- df$hospmort30day[df$los <= 28]
+df$hospmort28day[df$los > 28] <- 0
+df$time_28[df$los_hos <= 28] <- df$los_hos[df$los_hos <= 28]
+df$time_28[df$los > 28] <- 28
+
+df$time_30[df$los_hos <= 30] <- df$los_hos[df$los_hos <= 30]
+df$time_30[df$los > 30] <- 30
+
+df$hospmort60day[df$los <= 60] <- df$hospmort1yr[df$los <= 60]
+df$hospmort60day[df$los > 60] <- 0
+df$time_60[df$los_hos <= 60] <- df$los_hos[df$los_hos <= 60]
+df$time_60[df$los > 60] <- 60
+
+table(df$oxy_level, df$censor) 
+xtabs(~censor_7d+oxy_level,data=df)
+#substantial selection bias 
+
+# Only selecting no censoring
+# df_nolof <- df %>%filter(df$censor == 0)
+
+#df$aki_48hr_c[df$censor==0]<-df$aki_48hr[df$censor==0]
+#df$aki_7day_c[df$censor_7d==0]<-df$aki_7day[df$censor_7d==0]
+
+# Only selecting no censoring
+#df_nolof <- df %>%
+#  filter(df$censor == 0)
+
+
+```
+
+
+# Table
+```{r}
+hist(df$age, prob = TRUE)
+
+head(df)
+## Create an overall table for categorical variables
+catVars <- c("age_cat","gender","insurance", "surg","ethnicity",             "has_chronic_lung_conditions", "has_chronic_heart_problems", "has_diabetes", "has_hypertension","marital_status","aki_stage")
+catTableOverall <- CreateCatTable(vars = catVars, strata="oxy_level", data = df)
+## Simply typing the object name will invoke the print.CatTable method,
+## which will show the sample size, frequencies and percentages.
+## For 2-level variables, only the higher level is shown for simplicity
+## unless the variables are specified in the cramVars argument.
+catTableOverall
+try <- print(catTableOverall, exact = "ascites", quote = FALSE)
+write.csv(try, file = "catTableOverall.csv")
+
+CreateContTable(vars =c( "age","sofa","transfusion_first_24hr","fluid_intake_first24hr","oasis","saps","los","los_hos"), strata="oxy_level", data = df)
+```
+
+#Analysis
+#Univariate analysis
+```{r}
+CreateCatTable(vars=c("aki_48hr_c","aki_7day_new","hospmort30day"),strata="oxy_level",data=df)
+#aki_48hr_c
+uni_logistic <- glm(formula = aki_7day_new ~ oxy_level, 
+                    data = df,
+                    family = binomial)
+confint.lm(uni_logistic)
+exp(cbind(OR=coef(uni_logistic), confint.default(uni_logistic)))#??
+
+#mortality_30day
+model<-glm(formula = hospmort30day ~ oxy_level, data = df,family = binomial)
+exp(cbind(OR=coef(model), confint.default(model)))
+```
+
+# AKI in 7 days
+#IPW
+```{r}
+summary(as.factor(df$censor_7d))
+
+# Stabilized IPW
+# estimation of denominator of ip weights for not being censored
+denom.cens <- glm(censor_7d ~ oxy_level + as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension,   family = binomial(), data = df)
+summary(denom.cens)
+
+denom.p.cens <- predict(denom.cens, type = "response")
+
+# estimation of numerator of ip weights for not being censored
+numer.cens <- glm(censor_7d ~ oxy_level, family = binomial(), data = df)
+summary(numer.cens)
+numer.p.cens <- predict(numer.cens, type = "response")
+
+# Estimation of stabilized weight for not being censored
+df$sw.c <- ifelse(df$censor_7d == 0, ((1-numer.p.cens)/(1-denom.p.cens)),
+                  1)
+
+summary(df$sw.c)
+sd(df$sw.c)
+
+# estimation of denominator of ip weights for treatment (confounder?)
+denom.fit <- glm(oxy_level ~ as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, family = binomial(), data = df)
+summary(denom.fit)
+
+df$denom.p <- predict(denom.fit, type = "response")
+
+# estimation of numerator of ip weights for treatment (confounder?)
+numer.fit <- glm(oxy_level ~ 1, family = binomial(), data = df)
+summary(numer.fit)
+df$numer.p <- predict(numer.fit, type = "response")
+
+# Estimation of stabilized weight for treatment (confounder?)
+df$sw.a <- ifelse(df$oxy_level == 1,df$numer.p/df$denom.p,(1-df$numer.p)/(1-df$denom.p))
+summary(df$sw.a)
+
+# Estimation of Stabilized Censoring weight (sw)
+df$sw <- df$sw.a * df$sw.c
+summary(df$sw)
+
+# Use msm
+msm.w<-geeglm(aki_7day_new~oxy_level,data=df, weights=sw, id=hadm_id,corstr="independence",family= binomial(link = "logit"))
+OR<-exp(coef(msm.w)[2])
+SE <- coef(summary(msm.w))[,2][2]
+LCI<-exp(coef(msm.w)[2]-qnorm(0.975)*SE)
+UCI<-exp(coef(msm.w)[2]+qnorm(0.975)*SE)
+IPW<-cbind(OR, LCI, UCI)
+rownames(IPW)<-"IPW"
+```
+
+#Logistic regression
+```{r}
+# without censoring
+multi_logistic <- glm(formula = aki_7day_new ~ oxy_level + as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df, family = binomial)
+exp(cbind(OR=coef(multi_logistic), confint.default(multi_logistic)))
+logistic<-exp(cbind(OR=coef(multi_logistic), confint.default(multi_logistic)))[2,]
+
+# considering censoring
+logistic_cens<-geeglm(formula = aki_7day_new ~ oxy_level + as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df, family = binomial, weights=sw.c, id=hadm_id,corstr="independence")
+
+OR<-exp(coef(logistic_cens)[2])
+SE <- coef(summary(logistic_cens))[,2][2]
+LCI<-exp(coef(logistic_cens)[2]-qnorm(0.975)*SE)
+UCI<-exp(coef(logistic_cens)[2]+qnorm(0.975)*SE)
+Logistic_censor<-cbind(OR, LCI, UCI)
+rownames(Logistic_censor)<-"Logistic + censor"
+
+summary(logistic_cens)
+OR<-exp(coef(logistic_cens))
+SE <- coef(summary(logistic_cens))[,2]
+LCI<-exp(coef(logistic_cens)-qnorm(0.975)*SE)
+UCI<-exp(coef(logistic_cens)+qnorm(0.975)*SE)
+logis<-cbind(OR, LCI, UCI)
+write.csv(round(logis,3),"logis.csv")
+
+linear_cens<-geeglm(formula = aki_stage ~ oxy_level + as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df, weights=sw.c, id=hadm_id,corstr="independence")
+summary(linear_cens)
+
+# Interaction
+logistic_cens_int<-geeglm(formula = aki_7day_new ~ oxy_level + as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension+oxy_level:sofa, data = df, family = binomial, weights=sw.c, id=hadm_id,corstr="independence")
+summary(logistic_cens_int)
+```
+
+
+# Standardization
+```{r}
+d <- df 	
+d$interv <- -1  # Original includes missing value in Y
+
+d0 <- df  # All of Y is missing
+d0$interv <- 0
+d0$oxy_level <- 0
+d0$aki_7day_new <- NA
+
+d1 <- df # All of Y is missing		
+d1$interv <- 1
+d1$oxy_level <- 1
+d1$aki_7day_new <- NA
+
+d.onesample <- rbind(d,d0,d1)
+
+model<-glm(aki_7day_new ~oxy_level + as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data=d.onesample,family=binomial)
+
+d.onesample$predicted_meanY <- predict(model, d.onesample,type="response")
+
+E_0<-mean(d.onesample$predicted_meanY[d.onesample$interv==0])	
+E_1<-mean(d.onesample$predicted_meanY[d.onesample$interv==1])	
+(E_1/(1-E_1))/(E_0/(1-E_0)) 
+
+#Boostrap
+standardization <- function(data, indices){
+    d <- data[indices,] 	
+    d$interv <- -1  # Original includes missing value in Y
+    d0 <- d  # All of Y is missing
+    d0$interv <- 0
+    d0$oxy_level <- 0
+    d0$aki_7day_new <- NA
+    
+    d1 <- d # All of Y is missing		
+    d1$interv <- 1
+    d1$oxy_level <- 1
+    d1$aki_7day_new <- NA
+    
+    d.onesample <- rbind(d,d0,d1)
+    model<-glm(aki_7day_new ~oxy_level + as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data=d.onesample,family=binomial)
+    
+    d.onesample$predicted_meanY <- predict(model, d.onesample,type="response")
+    
+    E_0<-mean(d.onesample$predicted_meanY[d.onesample$interv==0])	
+    E_1<-mean(d.onesample$predicted_meanY[d.onesample$interv==1])	
+    (E_1/(1-E_1))/(E_0/(1-E_0)) 
+}	
+
+results <- boot(data=df, statistic=standardization, R=100)
+
+results$t0
+se<-sd(results$t)
+OR <- results$t0
+LCI<-OR - qnorm(0.975)*se	
+UCI<-OR + qnorm(0.975)*se
+Standardization<-cbind(OR, LCI, UCI)
+rownames(Standardization)<-"Standardization"
+
+```
+
+
+#PS
+```{r}
+# model to estimate propensity score
+model3 <- glm(oxy_level ~ as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, family = binomial(), data = df)
+
+Cstat(model3) #c-statistics?
+
+# predict PS values and assign to variable in dataset
+df$p.oxy <- predict(model3, df, 'response')
+df$ps <- df$denom.p # `p.oxy` and `ps` are exactly the same.
+df$p.oxy-df$ps
+# view summary statistics for PS by oxy_level (base R method)
+#with(df, by(ps, oxy_level, summary))
+
+df$oxylabel = ifelse(df$oxy_level == 1,
+                     yes = 'Liberal',
+                     no = 'Conservative')
+
+# plot PS distribution by oxy_level status (much more helpful)
+ggplot(df, aes(x = ps, fill = oxylabel)) + geom_density(alpha = 0.2) +
+    xlab('Probability of Having Liberal Oxygen Level') +
+    ggtitle('Propensity Score Distribution') +
+    scale_fill_discrete('') +
+    theme(legend.position = 'bottom', legend.direction = 'vertical')
+
+
+# attempt to reproduce plot from the book
+df %>%
+    mutate(ps.grp = round(ps/0.05) * 0.05) %>%
+    group_by(oxy_level, oxylabel, ps.grp) %>%
+    summarize(n = n()) %>%
+    ungroup() %>%
+    mutate(n2 = ifelse(oxy_level == 0, yes = n, no =  -1*n)) %>%
+    ggplot(aes(x = ps.grp, y = n2, fill = oxylabel)) +
+    geom_bar(stat = 'identity', position = 'identity') +
+    geom_text(aes(label = n, x = ps.grp, y = n2 + ifelse(oxylabel == 0, 8, -8))) +
+    xlab('Probability of Having Liberal Oxygen Level') +
+    ylab('N') +
+    ggtitle('Propensity Score Distribution by Treatment Group') +
+    scale_fill_discrete('') +
+    scale_x_continuous(breaks = seq(0, 1, 0.05)) +
+    theme(legend.position = 'bottom', legend.direction = 'vertical',
+          axis.ticks.y = element_blank(),
+          axis.text.y = element_blank())
+
+# regression on the propensity score (linear term)
+model6 <- glm(aki_7day_new ~ oxy_level + p.oxy, data = df, family = binomial())
+summary(model6)
+PSreg<-exp(cbind(OR=coef(model6), confint.default(model6)))[2,]
+
+
+# regression on the propensity score (linear term) + IPW
+model7<-geeglm(aki_7day_new ~ oxy_level + p.oxy, data = df, family = binomial(), weights=sw.c, id=hadm_id,corstr="independence")
+OR<-exp(coef(model7)[2])
+SE <- coef(summary(model7))[,2][2]
+LCI<-exp(coef(model7)[2]-qnorm(0.975)*SE)
+UCI<-exp(coef(model7)[2]+qnorm(0.975)*SE)
+PSreg_cens<-cbind(OR, LCI, UCI)
+rownames(PSreg_cens)<-"PS regression + censor"
+
+
+# Stratification on the propensity score                                  
+# function to create deciles easily
+decile <- function(x) {
+    return(factor(quantcut(x, seq(0, 1, 0.1), labels = FALSE)))
+}
+
+# regression on PS deciles
+model4 <- glm(aki_7day_new ~ oxy_level + decile(p.oxy), data = df, family = binomial())
+summary(model4)
+exp(confint.lm(model4))
+
+df$ps_cat<-decile(df$p.oxy)
+df %>%
+    nest(-ps_cat) %>% 
+    mutate(
+        fit = map(data, ~ lm(aki_7day_new ~ oxy_level, data = .x)),
+        tidied = map(fit, tidy)
+    ) %>% 
+    unnest(tidied)%>%filter(term=="oxy_level")%>%mutate(OR=exp(estimate),LCI=exp(estimate-1.96*std.error),UCI=exp(estimate+1.96*std.error))%>% dplyr::select(ps_cat,OR,LCI,UCI)%>%arrange(ps_cat)
+
+
+df %>%
+    nest(-ps_cat) %>% 
+    mutate(
+        fit = map(data, ~ geeglm(aki_7day_new ~ oxy_level, data = .x,weights=sw.c, id=hadm_id,corstr="independence")),
+        tidied = map(fit, tidy)
+    ) %>% 
+    unnest(tidied)%>%filter(term=="oxy_level")%>%mutate(OR=exp(estimate),LCI=exp(estimate-1.96*std.error),UCI=exp(estimate+1.96*std.error))%>% dplyr::select(ps_cat,OR,LCI,UCI,p.value)%>%arrange(ps_cat)
+
+# Standardization using the propensity score       
+#Boostrap
+standardization <- function(data, indices){
+    d <- data[indices,] 	
+    d$interv <- -1  # Original includes missing value in Y
+    d0 <- d  # All of Y is missing
+    d0$interv <- 0
+    d0$oxy_level <- 0
+    d0$aki_7day_new <- NA
+    
+    d1 <- d # All of Y is missing		
+    d1$interv <- 1
+    d1$oxy_level <- 1
+    d1$aki_7day_new <- NA
+    
+    d.onesample <- rbind(d,d0,d1)
+    model<-glm(aki_7day_new ~oxy_level + ps, data=d.onesample,family=binomial)
+    
+    d.onesample$predicted_meanY <- predict(model, d.onesample,type="response")
+    
+    E_0<-mean(d.onesample$predicted_meanY[d.onesample$interv==0])	
+    E_1<-mean(d.onesample$predicted_meanY[d.onesample$interv==1])	
+    (E_1/(1-E_1))/(E_0/(1-E_0)) 
+}	
+
+results <- boot(data=df, statistic=standardization, R=100)
+
+results$t0
+se<-sd(results$t)
+OR <- results$t0
+LCI<- OR - qnorm(0.975)*se	
+UCI<- OR + qnorm(0.975)*se
+Standardization_PS<-cbind(OR, LCI, UCI)
+rownames(Standardization_PS)<-"Standardization + PS"
+
+# Matching
+df_nomiss <- df %>% dplyr::select(hadm_id, oxy_level, ps) # MatchIt does not allow missing values
+m.out <- matchit(oxy_level ~ ps, data = df_nomiss, method = 'nearest', ratio = 1, caliper = 0.01)
+summary(m.out)
+#plot(m.out, type = "jitter")
+#plot(m.out, type = "hist")  # takes long long time
+m.data1 <- match.data(m.out)
+df_matching <- merge( m.data1, df, by = "hadm_id")
+
+ggplot(df_matching, aes(x = ps.x, fill = as.factor(oxy_level.y))) + geom_density(alpha = 0.2) +
+    xlab('Probability of Having Liberal Oxygen Level') +
+    ggtitle('Propensity Score Distribution') +
+    scale_fill_discrete(name="",labels=c("Conservative","Liberal")) +
+    theme(legend.position = 'bottom', legend.direction = 'vertical')
+
+# Univariate
+catTableOverall_matched <- CreateCatTable(vars = catVars, strata="oxy_level.y", data = df_matching)
+catTableOverall_matched
+try <- print(catTableOverall_matched, exact = "ascites", quote = FALSE)
+write.csv(try, file = "catTableOverall_matched.csv")
+CreateContTable(vars = c("age","sofa","transfusion_first_24hr","fluid_intake_first24hr"), strata="oxy_level.y", data = df_matching)
+
+
+ps_matched <- glm(aki_7day_new ~ oxy_level.y, data = df_matching, family = binomial()) # after matching, label of `oxy_level` changed to `oxy_level.y`
+summary(ps_matched)
+confint.lm(ps_matched)
+PSmatching<-exp(cbind(OR=coef(ps_matched), confint.default(ps_matched)))[2,]
+
+ps_matched_ipw <- geeglm(aki_7day_new ~ oxy_level.y, data = df_matching, family = binomial(),weights=sw.c, id=hadm_id,corstr="independence") # after matching, label of `oxy_level` changed to `oxy_level.y`
+OR<-exp(coef(ps_matched_ipw)[2])
+SE <- coef(summary(ps_matched_ipw))[,2][2]
+LCI<-exp(coef(ps_matched_ipw)[2]-qnorm(0.975)*SE)
+UCI<-exp(coef(ps_matched_ipw)[2]+qnorm(0.975)*SE)
+PSmatchipw<-cbind(OR, LCI, UCI)
+rownames(PSmatchipw)<-"PS matching + censor"
+```
+
+# Summary
+```{r}
+est<-as.data.frame(rbind(IPW,logistic,Logistic_censor,Standardization,PSmatching,PSmatchipw,PSreg,PSreg_cens,Standardization_PS))
+est<-add_rownames(est,"label")
+forest<-est  
+
+ggplot(data=forest, aes(x=label, y=OR, ymin=LCI, ymax=UCI)) +
+    geom_pointrange() + 
+    geom_hline(yintercept=1, lty=2) +  # add a dotted line at x=1 after flip
+    coord_flip() +  # flip coordinates (puts labels on y axis)
+    xlab("Methods") + ylab("Odds Ratio (95% CI)") +
+    theme_bw()
+
+# summary
+est_s<-as.data.frame(rbind(Standardization_PS,PSmatchipw,PSreg_cens,Standardization,IPW,Logistic_censor,logistic))
+est_s<-add_rownames(est_s,"label")
+est_s$label<-factor(est_s$label,c("PS matching + censor","Standardization + PS","Standardization","IPW","PS regression + censor","Logistic + censor","logistic"))
+
+ggplot(data=est_s, aes(x=label, y=OR, ymin=LCI, ymax=UCI)) +
+    geom_pointrange() + 
+    geom_hline(yintercept=1, lty=2) +  # add a dotted line at x=1 after flip
+    scale_x_discrete(label = c("PS matching + IPW for censoring","Standardization + PS","Standardiztion","Marginal structural model","Logistic regression using PS + IPW for censoring","Logistic regression + IPW for censoring","(Logistic regression)"))+
+    coord_flip() +  # flip coordinates (puts labels on y axis)
+    xlab("Methods") + ylab("Odds Ratio (95% CI)") +
+    theme_bw()
+
+
+ggplot(data=est_s, aes(x=label, y=OR, ymin=LCI, ymax=UCI)) +
+    geom_pointrange() + 
+    geom_hline(yintercept=1, lty=2) +  # add a dotted line at x=1 after flip
+    scale_x_discrete(label = c("PSM + IPW_cens","Standardization + PS","Standardiztion","Marginal structural model","Logis_reg (PS + IPW_cens)","Logis_reg + IPW_cens","(Logistic regression)"))+
+    coord_flip() +  # flip coordinates (puts labels on y axis)
+    xlab("Methods") + ylab("Odds Ratio (95% CI)") +
+    theme_bw()+
+    theme(axis.text.x = element_text(size=15), axis.title=element_text(size=15,face="bold"), axis.text.y = element_text(size=15))
+
+
+```
+
+
+# Survival analysis
+```{r}
+# 30days
+# New survival analysis for 30days mortality
+surv_object <- Surv(time = df$time_30, event = df$hospmort30day)
+surv_object 
+fit1 <- survfit(surv_object ~ df$oxy_level, data = df)
+summary(fit1)
+quantile(fit1)
+ggsurvplot(fit1, data = df, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"))
+# Crude cox
+crude.coxph <- coxph(surv_object ~ oxy_level, data = df)
+summary(crude.coxph)
+# Cox adjusiting for PS
+ps.coxph <- coxph(surv_object ~ oxy_level + p.oxy, data = df)
+summary(ps.coxph)
+# Cox adjusting for variables
+fit.coxph <- coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df)
+summary(fit.coxph)
+
+qplot(x = predict(fit.coxph),y = residuals(fit.coxph,type = "deviance"),xlab = "Predicted values",ylab = "Deviance Residuals",main = "Deviance residuals plot") + theme_classic()
+
+#zp<-cox.zph(fit.coxph, transform=function(time) log(time+5))
+#zp_1<-coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension+tt(oxy_level), data = df, tt=function(x,t,...)x*log(t+5))
+zp<-cox.zph(fit.coxph)
+plot(zp[1])
+abline(0,0, col=2)
+abline(h= fit.coxph$coef[1], col=3, lwd=2, lty=2)
+
+ggcoxzph(zp[1])
+ggcoxzph(fit.coxph[1])
+
+ggcoxzph(cox.zph(fit.coxph)[1])
+
+zp_1<-coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension+tt(oxy_level), data = df, tt=function(x,t,...)x*t)
+
+plot(zp[1], col=c(2,1),lwd=c(2,1),resid=F)
+abline(h= fit.coxph$coef[1], col=4, lwd=2)
+abline(0,0, col=3,lty=1,lwd=1)
+legend("bottomleft", legend=c("Time-varying HR","95% CI Time-varying HR","Time-fixed HR","Reference line (HR=1)"), lty=c(1,2,1,1), col=c(2,1,4,3),cex=0.9)	
+
+
+plot(zp[1],col=2,lwd=2)
+abline(0,0, col=1,lty=2,lwd=2)
+abline(h= fit.coxph$coef[1], col=4, lwd=2)
+abline(coef(zp_1)[1],coef(zp_1)[13], col=2,lwd=2)
+
+# 60days
+# New survival analysis for 30days mortality
+surv_object <- Surv(time = df$time_60, event = df$hospmort60day)
+surv_object 
+fit1 <- survfit(surv_object ~ df$oxy_level, data = df)
+summary(fit1)
+ggsurvplot(fit1, data = df, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"))
+# Crude cox
+crude.coxph <- coxph(surv_object ~ oxy_level, data = df)
+summary(crude.coxph)
+# Cox adjusting for variables
+fit.coxph <- coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df)
+summary(fit.coxph)
+
+qplot(x = predict(fit.coxph),y = residuals(fit.coxph,type = "deviance"),xlab = "Predicted values",ylab = "Deviance Residuals",main = "Deviance residuals plot") + theme_classic()
+
+zp<-cox.zph(fit.coxph, transform=function(time) log(time+10))
+
+plot(zp[1])
+axis(2, at=c(log(0.9),log(1),log(2)), labels=Fc("0.9","1","2"))
+
+abline(0,0, col=2)
+abline(h= fit.coxph$coef[1], col=3, lwd=2, lty=2)
+
+cox.zph(fit.coxph, transform="identity")
+
+zp_1<-coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension+tt(oxy_level), data = df, tt=function(x,t,...)x*log(t+10))
+plot(zp[1])
+abline(coef(zp_1)[1],coef(zp_1)[13], col=2)
+
+
+# Matched groups
+surv_matched <- Surv(time = df_matching$time_30, event = df_matching$hospmort30day)
+
+fit2 <- survfit(surv_matched ~ df_matching$oxy_level.y, data = df_matching)
+summary(fit2)
+
+fit2.coxph <- coxph(surv_matched ~oxy_level.y, data = df_matching)
+summary(fit2.coxph)
+
+ggsurvplot(fit2, data = df_matching, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"),font.x=15,font.y=15, font.legend=15)
+
+#28days
+# New survival analysis for 60days mortality
+surv_object <- Surv(time = df$time_28, event = df$hospmort28day)
+surv_object 
+fit1 <- survfit(surv_object ~ df$oxy_level, data = df)
+summary(fit1)
+ggsurvplot(fit1, data = df, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"),font.x=15,font.y=15, font.legend=15)
+# Crude cox
+crude.coxph <- coxph(surv_object ~ oxy_level, data = df)
+summary(crude.coxph)
+# Cox adjusiting for PS
+ps.coxph <- coxph(surv_object ~ oxy_level + p.oxy, data = df)
+summary(ps.coxph)
+# Cox adjusting for variables
+fit.coxph <- coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df)
+summary(fit.coxph)
+
+# Matched groups
+surv_matched <- Surv(time = df_matching$time_28, event = df_matching$hospmort28day)
+
+fit2 <- survfit(surv_matched ~ df_matching$oxy_level.y, data = df_matching)
+summary(fit2)
+
+fit2.coxph <- coxph(surv_matched ~oxy_level.y, data = df_matching)
+summary(fit2.coxph)
+
+ggsurvplot(fit2, data = df_matching, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"),font.x=15,font.y=15, font.legend=15)
+
+
+```
+
+
+
+
+
+
+

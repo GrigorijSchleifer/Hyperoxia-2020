@@ -1,0 +1,14 @@
+"","OR","LCI","UCI"
+"(Intercept)",0.019,0.008,0.046
+"oxy_level",0.678,0.465,0.987
+"as.factor(gender)M",1.237,0.866,1.768
+"age",1.009,0.998,1.021
+"as.factor(insurance)Medicaid/Medicare",1.483,0.974,2.257
+"as.factor(ethnicity)WHITE",0.655,0.446,0.96
+"sofa",1.133,1.067,1.202
+"transfusion_first_24hr",1,1,1
+"fluid_intake_first24hr",1,1,1
+"has_chronic_lung_conditions",1.274,0.786,2.066
+"has_chronic_heart_problems",2.659,1.729,4.091
+"has_diabetes",1.566,1.033,2.376
+"has_hypertension",1.185,0.808,1.739
