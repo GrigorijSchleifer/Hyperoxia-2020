@@ -249,7 +249,7 @@ library(purrr)
 # head(df)
 # ## Create an overall table for categorical variables
 # catVars <- c("age_cat","gender","insurance", "surg","ethnicity",             "has_chronic_lung_conditions", "has_chronic_heart_problems", "has_diabetes", "has_hypertension","marital_status","aki_stage")
-# catTableOverall <- CreateCatTable(vars = catVars, strata="oxy_level", data = df)
+# catTableOverall <- CreateCatTable(vars = catVars, strata="two_oxy_level, data = df)
 # ## Simply typing the object name will invoke the print.CatTable method,
 # ## which will show the sample size, frequencies and percentages.
 # ## For 2-level variables, only the higher level is shown for simplicity
@@ -258,7 +258,7 @@ library(purrr)
 # try <- print(catTableOverall, exact = "ascites", quote = FALSE)
 # write.csv(try, file = "catTableOverall.csv")
 # 
-# CreateContTable(vars =c( "age","sofa","transfusion_first_24hr","fluid_intake_first24hr","oasis","saps","los","los_hos"), strata="oxy_level", data = df)
+# CreateContTable(vars =c( "age","sofa","transfusion_first_24hr","fluid_intake_first24hr","oasis","saps","los","los_hos"), strata="two_oxy_level, data = df)
 ```
 
 #Analysis
@@ -266,12 +266,12 @@ library(purrr)
 ```{r}
 CreateCatTable(
   vars = c("aki_48hr_c", "aki_7day_new", "hospmort30day"),
-  strata = "oxy_level",
-  data = df
+  strata = "two_oxy_level",
+  data = cohort_pao2
 )
 # aki_48hr_c
 uni_logistic <- glm(formula = aki_7day_new ~ oxy_level,
-                    data = df,
+                    data = cohort_pao2,
                     family = binomial)
 
 confint.lm(uni_logistic)
@@ -281,7 +281,7 @@ exp(cbind(OR = coef(uni_logistic), confint.default(uni_logistic)))#??
 # mortality_30day
 model <-
   glm(formula = hospmort30day ~ oxy_level,
-      data = df,
+      data = cohort_pao2,
       family = binomial)
 
 exp(cbind(OR = coef(model), confint.default(model)))
@@ -543,7 +543,7 @@ df %>%
         fit = map(data, ~ lm(aki_7day_new ~ oxy_level, data = .x)),
         tidied = map(fit, tidy)
     ) %>%
-    unnest(tidied)%>%filter(term=="oxy_level")%>%mutate(OR=exp(estimate),LCI=exp(estimate-1.96*std.error),UCI=exp(estimate+1.96*std.error))%>% dplyr::select(ps_cat,OR,LCI,UCI)%>%arrange(ps_cat)
+    unnest(tidied)%>%filter(term=="two_oxy_level")%>%mutate(OR=exp(estimate),LCI=exp(estimate-1.96*std.error),UCI=exp(estimate+1.96*std.error))%>% dplyr::select(ps_cat,OR,LCI,UCI)%>%arrange(ps_cat)
 
 
 df %>%
@@ -552,7 +552,7 @@ df %>%
         fit = map(data, ~ geeglm(aki_7day_new ~ oxy_level, data = .x,weights=sw.c, id=hadm_id,corstr="independence")),
         tidied = map(fit, tidy)
     ) %>%
-    unnest(tidied)%>%filter(term=="oxy_level")%>%mutate(OR=exp(estimate),LCI=exp(estimate-1.96*std.error),UCI=exp(estimate+1.96*std.error))%>% dplyr::select(ps_cat,OR,LCI,UCI,p.value)%>%arrange(ps_cat)
+    unnest(tidied)%>%filter(term=="two_oxy_level")%>%mutate(OR=exp(estimate),LCI=exp(estimate-1.96*std.error),UCI=exp(estimate+1.96*std.error))%>% dplyr::select(ps_cat,OR,LCI,UCI,p.value)%>%arrange(ps_cat)
 
 # Standardization using the propensity score       
 #Boostrap
@@ -671,11 +671,20 @@ ggplot(data=est_s, aes(x=label, y=OR, ymin=LCI, ymax=UCI)) +
 # 30days
 # New survival analysis for 30days mortality
 surv_object <- Surv(time = df$time_30, event = df$hospmort30day)
-surv_object
+
 fit1 <- survfit(surv_object ~ df$oxy_level, data = df)
+
 summary(fit1)
 quantile(fit1)
-ggsurvplot(fit1, data = df, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"))
+
+ggsurvplot(
+    fit1,
+    data = df,
+    pval = TRUE,
+    xlab = "Time (days)",
+    legend.labs = c("Conservative", "Liberal")
+)
+
 # Crude cox
 crude.coxph <- coxph(surv_object ~ oxy_level, data = df)
 summary(crude.coxph)
@@ -683,35 +692,74 @@ summary(crude.coxph)
 ps.coxph <- coxph(surv_object ~ oxy_level + p.oxy, data = df)
 summary(ps.coxph)
 # Cox adjusting for variables
-fit.coxph <- coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df)
+fit.coxph <-
+    coxph(
+        surv_object ~ oxy_level + as.factor(gender) + age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr +
+            fluid_intake_first24hr + has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes +
+            has_hypertension,
+        data = df
+    )
 summary(fit.coxph)
 
-qplot(x = predict(fit.coxph),y = residuals(fit.coxph,type = "deviance"),xlab = "Predicted values",ylab = "Deviance Residuals",main = "Deviance residuals plot") + theme_classic()
+qplot(
+    x = predict(fit.coxph),
+    y = residuals(fit.coxph, type = "deviance"),
+    xlab = "Predicted values",
+    ylab = "Deviance Residuals",
+    main = "Deviance residuals plot"
+) + theme_classic()
 
 #zp<-cox.zph(fit.coxph, transform=function(time) log(time+5))
 #zp_1<-coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension+tt(oxy_level), data = df, tt=function(x,t,...)x*log(t+5))
-zp<-cox.zph(fit.coxph)
+zp <- cox.zph(fit.coxph)
 plot(zp[1])
-abline(0,0, col=2)
-abline(h= fit.coxph$coef[1], col=3, lwd=2, lty=2)
+abline(0, 0, col = 2)
+abline(
+    h = fit.coxph$coef[1],
+    col = 3,
+    lwd = 2,
+    lty = 2
+)
 
 ggcoxzph(zp[1])
 ggcoxzph(fit.coxph[1])
 
 ggcoxzph(cox.zph(fit.coxph)[1])
 
-zp_1<-coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension+tt(oxy_level), data = df, tt=function(x,t,...)x*t)
+zp_1 <-
+    coxph(
+        surv_object ~ oxy_level + as.factor(gender) + age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr +
+            fluid_intake_first24hr + has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes +
+            has_hypertension + tt(oxy_level),
+        data = df,
+        tt = function(x, t, ...)
+            x * t
+    )
 
-plot(zp[1], col=c(2,1),lwd=c(2,1),resid=F)
-abline(h= fit.coxph$coef[1], col=4, lwd=2)
-abline(0,0, col=3,lty=1,lwd=1)
-legend("bottomleft", legend=c("Time-varying HR","95% CI Time-varying HR","Time-fixed HR","Reference line (HR=1)"), lty=c(1,2,1,1), col=c(2,1,4,3),cex=0.9)
+plot(zp[1],
+     col = c(2, 1),
+     lwd = c(2, 1),
+     resid = F)
+abline(h = fit.coxph$coef[1], col = 4, lwd = 2)
+abline(0, 0, col = 3, lty = 1, lwd = 1)
+legend(
+    "bottomleft",
+    legend = c(
+        "Time-varying HR",
+        "95% CI Time-varying HR",
+        "Time-fixed HR",
+        "Reference line (HR=1)"
+    ),
+    lty = c(1, 2, 1, 1),
+    col = c(2, 1, 4, 3),
+    cex = 0.9
+)
 
 
-plot(zp[1],col=2,lwd=2)
-abline(0,0, col=1,lty=2,lwd=2)
-abline(h= fit.coxph$coef[1], col=4, lwd=2)
-abline(coef(zp_1)[1],coef(zp_1)[13], col=2,lwd=2)
+plot(zp[1], col = 2, lwd = 2)
+abline(0, 0, col = 1, lty = 2, lwd = 2)
+abline(h = fit.coxph$coef[1], col = 4, lwd = 2)
+abline(coef(zp_1)[1], coef(zp_1)[13], col = 2, lwd = 2)
 
 # 60days
 # New survival analysis for 30days mortality
@@ -719,41 +767,89 @@ surv_object <- Surv(time = df$time_60, event = df$hospmort60day)
 surv_object
 fit1 <- survfit(surv_object ~ df$oxy_level, data = df)
 summary(fit1)
-ggsurvplot(fit1, data = df, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"))
+ggsurvplot(
+    fit1,
+    data = df,
+    pval = TRUE,
+    xlab = "Time (days)",
+    legend.labs = c("Conservative", "Liberal")
+)
 # Crude cox
 crude.coxph <- coxph(surv_object ~ oxy_level, data = df)
 summary(crude.coxph)
 # Cox adjusting for variables
-fit.coxph <- coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df)
+fit.coxph <-
+    coxph(
+        surv_object ~ oxy_level + as.factor(gender) + age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr +
+            fluid_intake_first24hr + has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes +
+            has_hypertension,
+        data = df
+    )
 summary(fit.coxph)
 
-qplot(x = predict(fit.coxph),y = residuals(fit.coxph,type = "deviance"),xlab = "Predicted values",ylab = "Deviance Residuals",main = "Deviance residuals plot") + theme_classic()
+qplot(
+    x = predict(fit.coxph),
+    y = residuals(fit.coxph, type = "deviance"),
+    xlab = "Predicted values",
+    ylab = "Deviance Residuals",
+    main = "Deviance residuals plot"
+) + theme_classic()
 
-zp<-cox.zph(fit.coxph, transform=function(time) log(time+10))
+zp <- cox.zph(
+    fit.coxph,
+    transform = function(time)
+        log(time + 10)
+)
 
 plot(zp[1])
-axis(2, at=c(log(0.9),log(1),log(2)), labels=Fc("0.9","1","2"))
+axis(2,
+     at = c(log(0.9), log(1), log(2)),
+     labels = Fc("0.9", "1", "2"))
 
-abline(0,0, col=2)
-abline(h= fit.coxph$coef[1], col=3, lwd=2, lty=2)
+abline(0, 0, col = 2)
+abline(
+    h = fit.coxph$coef[1],
+    col = 3,
+    lwd = 2,
+    lty = 2
+)
 
-cox.zph(fit.coxph, transform="identity")
+cox.zph(fit.coxph, transform = "identity")
 
-zp_1<-coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension+tt(oxy_level), data = df, tt=function(x,t,...)x*log(t+10))
+zp_1 <-
+    coxph(
+        surv_object ~ oxy_level + as.factor(gender) + age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr +
+            fluid_intake_first24hr + has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes +
+            has_hypertension + tt(oxy_level),
+        data = df,
+        tt = function(x, t, ...)
+            x * log(t + 10)
+    )
 plot(zp[1])
-abline(coef(zp_1)[1],coef(zp_1)[13], col=2)
+abline(coef(zp_1)[1], coef(zp_1)[13], col = 2)
 
 
 # Matched groups
-surv_matched <- Surv(time = df_matching$time_30, event = df_matching$hospmort30day)
+surv_matched <-
+    Surv(time = df_matching$time_30, event = df_matching$hospmort30day)
 
-fit2 <- survfit(surv_matched ~ df_matching$oxy_level.y, data = df_matching)
+fit2 <-
+    survfit(surv_matched ~ df_matching$oxy_level.y, data = df_matching)
 summary(fit2)
 
-fit2.coxph <- coxph(surv_matched ~oxy_level.y, data = df_matching)
+fit2.coxph <- coxph(surv_matched ~ oxy_level.y, data = df_matching)
 summary(fit2.coxph)
 
-ggsurvplot(fit2, data = df_matching, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"),font.x=15,font.y=15, font.legend=15)
+ggsurvplot(
+    fit2,
+    data = df_matching,
+    pval = TRUE,
+    xlab = "Time (days)",
+    legend.labs = c("Conservative", "Liberal"),
+    font.x = 15,
+    font.y = 15,
+    font.legend = 15
+)
 
 #28days
 # New survival analysis for 60days mortality
@@ -761,7 +857,16 @@ surv_object <- Surv(time = df$time_28, event = df$hospmort28day)
 surv_object
 fit1 <- survfit(surv_object ~ df$oxy_level, data = df)
 summary(fit1)
-ggsurvplot(fit1, data = df, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"),font.x=15,font.y=15, font.legend=15)
+ggsurvplot(
+    fit1,
+    data = df,
+    pval = TRUE,
+    xlab = "Time (days)",
+    legend.labs = c("Conservative", "Liberal"),
+    font.x = 15,
+    font.y = 15,
+    font.legend = 15
+)
 # Crude cox
 crude.coxph <- coxph(surv_object ~ oxy_level, data = df)
 summary(crude.coxph)
@@ -769,19 +874,36 @@ summary(crude.coxph)
 ps.coxph <- coxph(surv_object ~ oxy_level + p.oxy, data = df)
 summary(ps.coxph)
 # Cox adjusting for variables
-fit.coxph <- coxph(surv_object ~oxy_level+as.factor(gender) +age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr+fluid_intake_first24hr+has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes+has_hypertension, data = df)
+fit.coxph <-
+    coxph(
+        surv_object ~ oxy_level + as.factor(gender) + age + as.factor(insurance)  + as.factor(ethnicity) + sofa + transfusion_first_24hr +
+            fluid_intake_first24hr + has_chronic_lung_conditions + has_chronic_heart_problems + has_diabetes +
+            has_hypertension,
+        data = df
+    )
 summary(fit.coxph)
 
 # Matched groups
-surv_matched <- Surv(time = df_matching$time_28, event = df_matching$hospmort28day)
+surv_matched <-
+    Surv(time = df_matching$time_28, event = df_matching$hospmort28day)
 
-fit2 <- survfit(surv_matched ~ df_matching$oxy_level.y, data = df_matching)
+fit2 <-
+    survfit(surv_matched ~ df_matching$oxy_level.y, data = df_matching)
 summary(fit2)
 
-fit2.coxph <- coxph(surv_matched ~oxy_level.y, data = df_matching)
+fit2.coxph <- coxph(surv_matched ~ oxy_level.y, data = df_matching)
 summary(fit2.coxph)
 
-ggsurvplot(fit2, data = df_matching, pval = TRUE,xlab="Time (days)", legend.labs=c("Conservative","Liberal"),font.x=15,font.y=15, font.legend=15)
+ggsurvplot(
+    fit2,
+    data = df_matching,
+    pval = TRUE,
+    xlab = "Time (days)",
+    legend.labs = c("Conservative", "Liberal"),
+    font.x = 15,
+    font.y = 15,
+    font.legend = 15
+)
 
 
 ```
