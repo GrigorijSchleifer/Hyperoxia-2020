@@ -486,7 +486,8 @@ ggplot(df, aes(x = ps, fill = oxylabel)) + geom_density(alpha = 0.2) +
     xlab('Probability of Having Liberal Oxygen Level') +
     ggtitle('Propensity Score Distribution') +
     scale_fill_discrete('') +
-    theme(legend.position = 'bottom', legend.direction = 'vertical')
+    theme(legend.position = 'bottom', legend.direct
+          ion = 'vertical')
 
 
 # attempt to reproduce plot from the book

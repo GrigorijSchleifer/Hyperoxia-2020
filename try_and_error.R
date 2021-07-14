@@ -1,15 +1,3 @@
 cohort_pao2 %>% 
-    group_by(age_cat) %>% 
-    mutate()
-    summarise(mean_age = mean(age))
-
-
-
-
-
-
-
-
-
-
-
+    group_by(two_oxy_level) %>%
+    summarise(mean_sf = median(sofa, na.rm = TRUE))
