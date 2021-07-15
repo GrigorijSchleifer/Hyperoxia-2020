@@ -10,6 +10,7 @@ knitr::opts_knit$set(root.dir = "/Users/grigorijschleifer/Desktop/Hyperoxia-2020
 
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
 library(tableone)
+library(sjPlot)
 theme_set(theme_light())
 ```
 
@@ -25,22 +26,19 @@ CreateCatTable(
     strata = "two_oxy_level",
     data = cohort_pao2
 )
-# aki_48hr_c
+# aki_7day_new = -2.71788 + (-0.64270 * two_oxy_level) 
 uni_logistic <-
     glm(
-        formula = aki_7day_new ~ two_oxy_level + two_oxy_level:sofa,
+        formula = aki_7day_new ~ two_oxy_level +  has_chronic_lung_conditions + sofa,
         data = cohort_pao2,
         family = binomial
     )
-
-confint.lm(uni_logistic)
+summary(uni_logistic)
+tab_model(uni_logistic)
 
 # mortality_30day
 model <-
     glm(formula = hospmort30day ~ two_oxy_level,
         data = cohort_pao2,
-        family = binomial)
-
-exp(cbind(OR = coef(model), confint.default(model)))
-```
-
+        family = binomial)  tab_model(model) 
+``` 

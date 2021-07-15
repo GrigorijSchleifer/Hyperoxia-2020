@@ -265,12 +265,12 @@ library(purrr)
 #Univariate analysis
 ```{r}
 CreateCatTable(
-  vars = c("aki_48hr_c", "aki_7day_new", "hospmort30day"),
+  vars = c("aki_7day_new", "hospmort30day"),
   strata = "two_oxy_level",
   data = cohort_pao2
 )
 # aki_48hr_c
-uni_logistic <- glm(formula = aki_7day_new ~ oxy_level,
+uni_logistic <- glm(formula = aki_7day_new ~ two_oxy_level,
                     data = cohort_pao2,
                     family = binomial)
 

@@ -12,8 +12,8 @@ pdf_document: default
 html_document: default
 ---
 
-Aus der Klinik und Poliklinik für Anästhesiologie und Operative Intensivmedizin <br>
-#### Direktor: Prof. Dr. med. Mark Coburn
+Klinik und Poliklinik für Anästhesiologie und Operative Intensivmedizin <br>
+Direktor: Prof. Dr. med. Mark Coburn
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
