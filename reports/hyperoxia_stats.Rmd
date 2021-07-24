@@ -22,7 +22,7 @@ cohort_pao2 <- read_csv("~/Desktop/Hyperoxia-2020/data/report_data/cohort_pao2.c
 
 ```{r}
 CreateCatTable(
-    vars = c("aki_7day_new", "sofa", "hospmort30day"),
+    vars = c("aki_7day_new", "sofa"),
     strata = "two_oxy_level",
     data = cohort_pao2
 )
