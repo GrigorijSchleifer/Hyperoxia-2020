@@ -1,5 +1,6 @@
-# rm(list = ls())
-# setwd("/Users/grigorijschleifer/Desktop/MIMIC_III/PT_Hyperoxia_2020")
+rm(list = ls())
+
+setwd("/Users/grigorijschleifer/Desktop/Git/Hyperoxia-2020")
 # library(ProjectTemplate); load.project()
 # par(mar=c(1,1,1,1)) to deal with the Error in plot.new() : figure margins too large
 
@@ -15,7 +16,7 @@ hyper %>% filter(!is.na(mean_pao2_24hr), los >= 1) %>% summarize(n())
 
 glimpse(hyper)
 
-##### age ##### 
+ ##### age ##### 
 # age distirbution
 ggplot(hyper) +
     geom_bar(mapping = aes(x = age), binwidth = 10)
