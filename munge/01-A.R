@@ -1,16 +1,18 @@
 # why is day 7 set as a cutoff?
 # a separate column (censor_7d) for censoring is created where patients with less than 7 days of stay and without AKI are assigned a 0
 
-##############################################################
-###################       GIT      ###########################
-##############################################################
+#### Questions ####
+
+# where is the admission time? What about the 6 hours?
+# How is time_weighted_24hr_pao2 calculated?
+
+##### ToDo's ####
+# 48 hours and 7 days of length of stay to define KDIGO
+# Dose response plot for 3 levels of KDIGO
+#### Assigning oxy level, ####
 #  use_git_config(user.name = "Grigorij Schleifer", user.email = "chaosambulance@googlemail.com")
 cohort_pao2 <- hyper %>%
-    ##### how is this calculated #####
     dplyr::filter(!is.na(time_weighted_24hr_pao2), los >= 1, age >= 16) %>%
-    ####################################################################
-    #### where is the admission time? What about the 6 hours?????? #####
-    ####################################################################
     # assign two hyperoxia levels
     mutate(two_oxy_level = ifelse(time_weighted_24hr_pao2 >= 100, 1, 0)) %>% 
     # create 5 different levels of oxygenation
@@ -177,6 +179,7 @@ cohort_pao2 <- hyper %>%
         )
     )
 
+#####
 
 # # change all factors inside the columns to characters
 # status_cohort[] <- lapply(status_cohort, as.character)
