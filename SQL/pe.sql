@@ -5,25 +5,39 @@
 -- "COMPLICATED PEPTIC ULCER" or "GASTROINTESTINAL HEMORRHAGE WITHOUT COMPLICATIONS, COMORBIDITIES". These patients were therefore excluded
 -- ICD9 code 415.* is for pulmonary embolism
 -- Additionally, a right join with the Note Events table was utilized with a where clause looking for CT scan notes.
+-- right join with the Note Events table was utilized with a where clause looking for CT scan notes.
 
-SELECT DISTINCT PatDim.SUBJECT_ID, Admissions.HADM_ID, PatDim.GENDER, PatDim.DOB,
-  PatDim.DOD, PatDim.DOD_HOSP, PatDim.DOD_SSN, PatDim.EXPIRE_FLAG,
-  Admissions.DIAGNOSIS, Admissions.LANGUAGE, Admissions.ETHNICITY, Admissions.MARITAL_STATUS, Admissions.RELIGION, Admissions.INSURANCE, 
-  Admissions.ADMITTIME, Admissions.DISCHTIME, Admissions.DEATHTIME,
-  Admissions.ADMISSION_LOCATION, Admissions.DISCHARGE_LOCATION
+SELECT  DISTINCT PatDim.SUBJECT_ID
+       ,Admissions.HADM_ID
+       ,PatDim.GENDER
+       ,PatDim.DOB
+       ,PatDim.DOD
+       ,PatDim.DOD_HOSP
+       ,PatDim.DOD_SSN
+       ,PatDim.EXPIRE_FLAG
+       ,Admissions.DIAGNOSIS
+       ,Admissions.LANGUAGE
+       ,Admissions.ETHNICITY
+       ,Admissions.MARITAL_STATUS
+       ,Admissions.RELIGION
+       ,Admissions.INSURANCE
+       ,Admissions.ADMITTIME
+       ,Admissions.DISCHTIME
+       ,Admissions.DEATHTIME
+       ,Admissions.ADMISSION_LOCATION
+       ,Admissions.DISCHARGE_LOCATION
   FROM `physionet-data.mimiciii_clinical.admissions` AS Admissions
 
 left join `physionet-data.mimiciii_clinical.diagnoses_icd` AS Dx on
 Admissions.HADM_ID = Dx.HADM_ID
 
-left join `mimiciii_clinical.drgcodes` AS DrgDim on
+left join `physionet-data.mimiciii_clinical.drgcodes` AS DrgDim on
 Admissions.HADM_ID = DrgDim.HADM_ID
 
-left join `mimiciii_clinical.patients` AS PatDim on
+left join `physionet-data.mimiciii_clinical.patients` AS PatDim on
 Admissions.SUBJECT_ID = PatDim.SUBJECT_ID
 
--- right join with the Note Events table was utilized with a where clause looking for CT scan notes.
-right join (select DISTINCT * from `mimiciii_derived.noteevents_metadata` 
+right join (select DISTINCT * from `physionet-data.mimiciii_derived.noteevents_metadata` 
 
 where DESCRIPTION IN
     ('CHEST CTA WITH CONTRAST',
@@ -42,19 +56,19 @@ where DESCRIPTION IN
     ) AS CT ON
   Admissions.HADM_ID = CT.HADM_ID
 
-left join `mimiciii_clinical.icustays` ICUStayDim on
+left join `physionet-data.mimiciii_clinical.icustays` ICUStayDim on
 Admissions.HADM_ID = ICUStayDim.HADM_ID
 
 left join (select ECGNote.SUBJECT_ID, ECGNote.HADM_ID, ECGNote.CHARTDATE, ECGNote.CATEGORY,
   ECGNote.DESCRIPTION, ECGNote.CGID, ECGNote.ISERROR, ECGNote.TEXT
-  from `mimiciii_notes.noteevents` AS ECGNote
+  from `physionet-data.mimiciii_notes.noteevents` AS ECGNote
 
   where CATEGORY = 'ECG') AS ECG on
   Admissions.HADM_ID = ECG.HADM_ID
   
 where (Dx.ICD9_CODE LIKE "415%"
-    OR DrgDim.DRG_CODE in (175, 176, 1341, 1342, 1343, 1344)
-    OR (DrgDim.DRG_CODE in (175, 176)
+    OR DrgDim.DRG_CODE in ("175", "176", "1341", "1342", "1343", "1344")
+    OR (DrgDim.DRG_CODE in ("175", "176")
       AND DrgDim.DESCRIPTION != 'COMPLICATED PEPTIC ULCER'
       AND DrgDim.DESCRIPTION != 'GASTROINTESTINAL HEMORRHAGE WITHOUT COMPLICATIONS, COMORBIDITIES'))
   AND ADMISSION_LOCATION = 'EMERGENCY ROOM ADMIT';
