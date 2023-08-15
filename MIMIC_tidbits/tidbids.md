@@ -1,6 +1,6 @@
 ### MIMIC III vs. MIMIC IV 
 
-#### ward_id for the physical bed location only in MIMIC III, not in MIMIC IV
+* ward_id for the physical bed location only in MIMIC III, not in MIMIC IV
 
 
 ### MIMIC IV
