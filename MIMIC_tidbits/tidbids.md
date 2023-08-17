@@ -2,6 +2,7 @@
 
 * ward_id for the physical bed location only in MIMIC III, not in MIMIC IV
 * MIMIC III ends in 2012, MIMIC IV in 2019
+* MIMIC III doesnt have mimic_hosp
 
 ### MIMIC III AND MIMIC IV 
 
@@ -15,3 +16,6 @@
 ### MIMIC IV
 
 * Dates of birth which occur in the present time are not true dates of birth
+* four mudules mimic_core, mimic_icu (most data?), mimic_ed, mimic_cxr
+* mimic_hosp is source from the hospital EHR and contains out of hospital information as well
+* to retrieve diagnoses for a patient - drgcodes (very general) and diagnoses_icd (very detailed)
