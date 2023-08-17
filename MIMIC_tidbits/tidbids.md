@@ -6,6 +6,7 @@
 ### MIMIC III AND MIMIC IV 
 
 * subject_id belongs always to the same person
+* inputevents is a table for i.v. medications
 
 ### MIMIC III
 * __DOD_SSN__ death up to 90 days in the future for Metavision patients. It contains dates of death up to 4 years in the future for CareVue patients.
