@@ -7,7 +7,7 @@
 -- Additionally, a right join with the Note Events table was utilized with a where clause looking for CT scan notes.
 -- right join with the Note Events table was utilized with a where clause looking for CT scan notes.
 
-SELECT  DISTINCT PatDim.SUBJECT_ID
+SELECT  DISTINCT PatDim.SUBJECT_ID 
        ,Admissions.HADM_ID
        ,PatDim.GENDER
        ,PatDim.DOB
