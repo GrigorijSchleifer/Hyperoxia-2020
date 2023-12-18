@@ -1,3 +1,7 @@
+# Try harder
+
+
+
 # why is day 7 set as a cutoff?
 # a separate column (censor_7d) for censoring is created where patients with less than 7 days of stay and without AKI are assigned a 0
 
