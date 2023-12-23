@@ -6,3 +6,5 @@
 # Legalize it!
 # pulse pressure has a lower and an upper end .. it is so far not clear what the notch in pulomnary artery pressure wave form means
 
+# just realized that you can overline the pulmonary artery pressure graph and the central venus graph and allign waves and say fancy things that nobody understands
+# what the fuck
