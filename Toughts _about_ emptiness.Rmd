@@ -12,3 +12,6 @@
 # Fröhliche Weihnachten
 # The pulomonary artery pressure waveform can be understood as an combination of right ventricular wave superimposed on the left atrial waveform ... 
 # The interesting part is that left atrial also has a and c waves!
+
+### 25.12.23
+# Cobalamin (70mg/kg) und 4-DMAP (3-4 mg/kg) können zusammen gegeben werden, jedoch 4-DMAP nicht bei Brandgasvergiftung -> dort Cobalamin (Cyanokit) mit O2
